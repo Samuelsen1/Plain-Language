@@ -362,6 +362,10 @@
     textToSpeechHandler = function(event) {
       const selectedText = window.getSelection().toString().trim();
       if (selectedText.length > 0) {
+        // Prevent browser extensions from hijacking the selection
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        
         // Cancel any ongoing speech
         speechSynthesis.cancel();
         
@@ -409,8 +413,8 @@
       }
     };
 
-    document.addEventListener('mouseup', textToSpeechHandler);
-    document.addEventListener('touchend', textToSpeechHandler);
+    document.addEventListener('mouseup', textToSpeechHandler, true);
+    document.addEventListener('touchend', textToSpeechHandler, true);
     
     // Add CSS animation styles
     const style = document.createElement('style');
@@ -452,8 +456,8 @@
 
   function disableTextToSpeech() {
     if (textToSpeechHandler) {
-      document.removeEventListener('mouseup', textToSpeechHandler);
-      document.removeEventListener('touchend', textToSpeechHandler);
+      document.removeEventListener('mouseup', textToSpeechHandler, true);
+      document.removeEventListener('touchend', textToSpeechHandler, true);
       textToSpeechHandler = null;
     }
     
