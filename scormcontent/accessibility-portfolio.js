@@ -360,53 +360,56 @@
     }, 4000);
 
     textToSpeechHandler = function(event) {
-      const selectedText = window.getSelection().toString().trim();
-      if (selectedText.length > 0) {
-        // Cancel any ongoing speech
-        speechSynthesis.cancel();
-        
-        // Create and speak the utterance
-        const utterance = new SpeechSynthesisUtterance(selectedText);
-        utterance.rate = 0.9;
-        utterance.pitch = 1;
-        utterance.volume = 1;
-        
-        // Visual feedback when speaking
-        utterance.onstart = function() {
-          // Add speaking indicator
-          const indicator = document.createElement('div');
-          indicator.id = 'tts-speaking-indicator';
-          indicator.innerHTML = '🔊 Speaking...';
-          indicator.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(34, 197, 94, 0.95);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 500;
-            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
-            z-index: 999999;
-            animation: pulse 1s infinite;
-            pointer-events: none;
-            user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-          `;
-          document.body.appendChild(indicator);
-        };
-        
-        utterance.onend = function() {
-          // Remove speaking indicator
-          const indicator = document.getElementById('tts-speaking-indicator');
-          if (indicator) indicator.remove();
-        };
-        
-        speechSynthesis.speak(utterance);
-      }
+      // Small delay to ensure selection is complete
+      setTimeout(() => {
+        const selectedText = window.getSelection().toString().trim();
+        if (selectedText.length > 0) {
+          // Cancel any ongoing speech
+          speechSynthesis.cancel();
+          
+          // Create and speak the utterance
+          const utterance = new SpeechSynthesisUtterance(selectedText);
+          utterance.rate = 0.9;
+          utterance.pitch = 1;
+          utterance.volume = 1;
+          
+          // Visual feedback when speaking
+          utterance.onstart = function() {
+            // Add speaking indicator
+            const indicator = document.createElement('div');
+            indicator.id = 'tts-speaking-indicator';
+            indicator.innerHTML = '🔊 Speaking...';
+            indicator.style.cssText = `
+              position: fixed;
+              bottom: 20px;
+              right: 20px;
+              background: rgba(34, 197, 94, 0.95);
+              color: white;
+              padding: 10px 20px;
+              border-radius: 20px;
+              font-size: 13px;
+              font-weight: 500;
+              box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+              z-index: 999999;
+              animation: pulse 1s infinite;
+              pointer-events: none;
+              user-select: none;
+              -webkit-user-select: none;
+              -moz-user-select: none;
+              -ms-user-select: none;
+            `;
+            document.body.appendChild(indicator);
+          };
+          
+          utterance.onend = function() {
+            // Remove speaking indicator
+            const indicator = document.getElementById('tts-speaking-indicator');
+            if (indicator) indicator.remove();
+          };
+          
+          speechSynthesis.speak(utterance);
+        }
+      }, 100);
     };
 
     document.addEventListener('mouseup', textToSpeechHandler);
