@@ -596,168 +596,65 @@
 
   // ============ INJECT KEY PRINCIPLES IMAGE ============
   function injectKeyPrinciplesImage() {
-    const STATE = {
-      scheduled: false,
-      observer: null,
-      lastHash: '',
-    };
-
-    function findKeyPrinciplesSection(root) {
-      if (!root) return null;
-      const candidates = root.querySelectorAll('section, [class*="block"], [class*="component"]');
-      for (const section of candidates) {
-        const text = (section.textContent || '').replace(/\s+/g, ' ').trim();
-        if (
-          text.includes('Key Principles') &&
-          text.includes('Short Sentences') &&
-          text.includes('Active Voice') &&
-          text.includes('Familiar Words')
-        ) {
-          return section;
+    // Simple approach: check every 2 seconds and inject if needed
+    function tryInjectImage() {
+      // Remove any existing infographic first to prevent duplicates
+      const existing = document.querySelector('.key-principles-infographic-section');
+      
+      // Look for the Key Principles heading text
+      const allElements = document.querySelectorAll('h1, h2, h3, h4, p, div, section');
+      let keyPrinciplesSection = null;
+      
+      for (const element of allElements) {
+        const text = element.textContent || '';
+        if (text.includes('Key Principles') && 
+            text.includes('Short Sentences') && 
+            text.includes('Active Voice') && 
+            text.includes('Familiar Words')) {
+          keyPrinciplesSection = element.closest('section') || element.parentElement;
+          break;
         }
       }
-      return null;
-    }
-
-    function findUsingShortSentencesSection(root) {
-      if (!root) return null;
-      const candidates = root.querySelectorAll('section, [class*="block"], [class*="component"]');
-      for (const section of candidates) {
-        const text = (section.textContent || '').trim();
-        if (text.includes('Using Short Sentences')) {
-          return section;
+      
+      // If we found the section and no image exists yet
+      if (keyPrinciplesSection && !existing) {
+        const img = document.createElement('img');
+        img.src = 'images/Key Principles.jpeg';
+        img.alt = 'Key Principles of Plain Language Infographic';
+        img.className = 'key-principles-infographic-section';
+        img.style.cssText = `
+          width: 100%;
+          max-width: 800px;
+          height: auto;
+          display: block;
+          margin: 40px auto;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
+        
+        // Insert after the Key Principles section
+        if (keyPrinciplesSection.nextSibling) {
+          keyPrinciplesSection.parentNode.insertBefore(img, keyPrinciplesSection.nextSibling);
+        } else {
+          keyPrinciplesSection.parentNode.appendChild(img);
         }
       }
-      return null;
-    }
-
-    function createInfographicSection(templateSection) {
-      const section = document.createElement('section');
-      if (templateSection?.className) {
-        section.className = templateSection.className;
-      }
-      section.classList.add('key-principles-infographic-section');
-      section.dataset.injected = 'key-principles';
-
-      const wrapper = document.createElement('div');
-      wrapper.style.cssText = `
-        max-width: 960px;
-        margin: 0 auto;
-        padding: 40px 20px;
-        text-align: center;
-        box-sizing: border-box;
-      `;
-
-      const img = document.createElement('img');
-      img.src = 'images/Key Principles.jpeg';
-      img.alt = 'Key Principles of Plain Language Infographic';
-      img.style.cssText = `
-        width: 100%;
-        max-width: 800px;
-        height: auto;
-        display: block;
-        margin: 0 auto;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      `;
-
-      wrapper.appendChild(img);
-      section.appendChild(wrapper);
-      return section;
-    }
-
-    function ensureInfographicPlacement() {
-      const appContainer = document.querySelector('#app');
-      if (!appContainer) {
-        return;
-      }
-
-      const currentHash = window.location.hash;
-      const keySection = findKeyPrinciplesSection(appContainer);
-
-      // Remove infographic completely if we're not on the relevant lesson
-      if (!keySection) {
-        document.querySelectorAll('.key-principles-infographic-section').forEach(node => node.remove());
-        STATE.lastHash = currentHash;
-        return;
-      }
-
-      const parentContainer = keySection.parentNode;
-      const usingSection = findUsingShortSentencesSection(parentContainer);
-
-      const infographicSections = Array.from(document.querySelectorAll('.key-principles-infographic-section'));
-      let infographicSection = infographicSections.shift();
-
-      // Remove any duplicates beyond the first
-      infographicSections.forEach(node => node.remove());
-
-      if (!infographicSection || !infographicSection.isConnected) {
-        infographicSection = createInfographicSection(keySection);
-      }
-
-      // If parent changed, move the section
-      if (infographicSection.parentNode !== parentContainer) {
-        parentContainer.insertBefore(infographicSection, usingSection || keySection.nextSibling);
-      } else {
-        const desiredSibling = usingSection || keySection.nextSibling;
-        if (desiredSibling) {
-          if (infographicSection.nextSibling !== desiredSibling) {
-            parentContainer.insertBefore(infographicSection, desiredSibling);
-          }
-        } else if (infographicSection.nextSibling !== null) {
-          parentContainer.appendChild(infographicSection);
-        }
-      }
-
-      STATE.lastHash = currentHash;
-    }
-
-    function schedulePlacement() {
-      if (STATE.scheduled) return;
-      STATE.scheduled = true;
-      requestAnimationFrame(() => {
-        STATE.scheduled = false;
-        ensureInfographicPlacement();
-      });
-    }
-
-    // Observe DOM changes to keep the infographic stable
-    function startObserver() {
-      if (STATE.observer) return;
-      const appContainer = document.querySelector('#app');
-      if (!appContainer) return;
-
-      STATE.observer = new MutationObserver(() => {
-        schedulePlacement();
-      });
-
-      STATE.observer.observe(appContainer, {
-        childList: true,
-        subtree: true,
-      });
-    }
-
-    function stopObserver() {
-      if (STATE.observer) {
-        STATE.observer.disconnect();
-        STATE.observer = null;
+      
+      // If we're not on the Key Principles page, remove the image
+      if (!keyPrinciplesSection && existing) {
+        existing.remove();
       }
     }
-
-    // Initial placement
-    setTimeout(() => {
-      ensureInfographicPlacement();
-      startObserver();
-    }, 1000);
-
-    // Re-run when navigating between lessons
+    
+    // Check on page load
+    tryInjectImage();
+    
+    // Check periodically (simple and reliable)
+    setInterval(tryInjectImage, 2000);
+    
+    // Also check on hash changes for faster response
     window.addEventListener('hashchange', () => {
-      stopObserver();
-      document.querySelectorAll('.key-principles-infographic-section').forEach(node => node.remove());
-      setTimeout(() => {
-        ensureInfographicPlacement();
-        startObserver();
-      }, 1200);
+      setTimeout(tryInjectImage, 500);
     });
   }
 
