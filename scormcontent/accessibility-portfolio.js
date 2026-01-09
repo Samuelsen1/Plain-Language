@@ -9,7 +9,8 @@
     textSpacing: 0,
     dyslexia: 0,
     focusIndicator: 0,
-    hideImages: 0
+    hideImages: 0,
+    theme: 'light' // 'light' or 'dark'
   };
 
   // Settings configuration for e-learning
@@ -19,7 +20,8 @@
     textSpacing: { levels: 2, binary: false },
     dyslexia: { levels: 2, binary: false },
     focusIndicator: { levels: 2, binary: false },
-    hideImages: { levels: 1, binary: true }
+    hideImages: { levels: 1, binary: true },
+    theme: { levels: 1, binary: true }
   };
 
   // ============ LOAD FROM LOCALSTORAGE ============
@@ -49,7 +51,10 @@
     const config = settingsConfig[setting];
     if (!config) return;
 
-    if (config.binary) {
+    if (setting === 'theme') {
+      // Theme toggle: light ↔ dark
+      state.theme = state.theme === 'light' ? 'dark' : 'light';
+    } else if (config.binary) {
       // Binary toggle: 0 → 1 → 0
       state[setting] = state[setting] === 0 ? 1 : 0;
     } else {
@@ -293,6 +298,133 @@
       const style = document.getElementById('focus-indicator-style');
       if (style) style.remove();
     }
+
+    // Theme - apply to entire page
+    applyTheme();
+  }
+
+  // ============ APPLY THEME ============
+  function applyTheme() {
+    const root = document.documentElement;
+    const body = document.body;
+    
+    // Update theme button icon and label
+    const themeButton = document.querySelector('[data-setting="theme"]');
+    if (themeButton) {
+      const icon = themeButton.querySelector('span:first-child');
+      const label = themeButton.querySelector('.text-xs');
+      
+      if (state.theme === 'dark') {
+        if (icon) icon.textContent = '☀️';
+        if (label) label.textContent = 'Light Theme';
+      } else {
+        if (icon) icon.textContent = '🌙';
+        if (label) label.textContent = 'Dark Theme';
+      }
+    }
+    
+    if (state.theme === 'dark') {
+      // Dark theme colors
+      root.style.setProperty('--bg-primary', '#1a1a1a');
+      root.style.setProperty('--bg-secondary', '#2d2d2d');
+      root.style.setProperty('--text-primary', '#e5e5e5');
+      root.style.setProperty('--text-secondary', '#a3a3a3');
+      root.style.setProperty('--border-color', '#404040');
+      root.style.setProperty('--accent-color', '#60a5fa');
+      
+      body.style.backgroundColor = '#1a1a1a';
+      body.style.color = '#e5e5e5';
+      
+      // Apply dark theme to app content
+      const appContent = document.getElementById('app') || body;
+      appContent.style.backgroundColor = '#1a1a1a';
+      appContent.style.color = '#e5e5e5';
+      
+      // Inject dark theme styles
+      const darkThemeStyle = document.getElementById('dark-theme-style') || document.createElement('style');
+      darkThemeStyle.id = 'dark-theme-style';
+      darkThemeStyle.textContent = `
+        body, body *, #app, #app * {
+          background-color: #1a1a1a !important;
+          color: #e5e5e5 !important;
+          border-color: #404040 !important;
+        }
+        body h1, body h2, body h3, body h4, body h5, body h6 {
+          color: #ffffff !important;
+        }
+        body a {
+          color: #60a5fa !important;
+        }
+        body a:hover {
+          color: #93c5fd !important;
+        }
+        body button {
+          background-color: #2d2d2d !important;
+          color: #e5e5e5 !important;
+          border-color: #404040 !important;
+        }
+        body button:hover {
+          background-color: #404040 !important;
+        }
+        body input, body textarea, body select {
+          background-color: #2d2d2d !important;
+          color: #e5e5e5 !important;
+          border-color: #404040 !important;
+        }
+        /* Preserve accessibility panel styling */
+        #accessibility-container,
+        #accessibility-container * {
+          background-color: #ffffff !important;
+          color: #1f2937 !important;
+          border-color: #e5e7eb !important;
+        }
+        #accessibility-container .accessibility-option img {
+          filter: brightness(0.5) !important;
+        }
+        #accessibility-container .accessibility-option[data-active="true"] {
+          background-color: #dbeafe !important;
+          border-color: #93c5fd !important;
+        }
+        #accessibility-container .accessibility-option[data-active="true"] img {
+          filter: brightness(0) invert(1) !important;
+        }
+        /* Exclude video players and interactive scenarios from dark theme */
+        video, video *, 
+        iframe, iframe *,
+        [class*="video"], [class*="video"] *,
+        [class*="player"], [class*="player"] *,
+        [class*="scenario"], [class*="scenario"] *,
+        [class*="interactive"], [class*="interactive"] *,
+        [data-block-type="multimedia"], [data-block-type="multimedia"] *,
+        [data-block-type="interactive"], [data-block-type="interactive"] * {
+          background-color: initial !important;
+          color: initial !important;
+          border-color: initial !important;
+        }
+      `;
+      if (!darkThemeStyle.parentNode) {
+        document.head.appendChild(darkThemeStyle);
+      }
+    } else {
+      // Light theme (default)
+      root.style.setProperty('--bg-primary', '#ffffff');
+      root.style.setProperty('--bg-secondary', '#f9fafb');
+      root.style.setProperty('--text-primary', '#1f2937');
+      root.style.setProperty('--text-secondary', '#6b7280');
+      root.style.setProperty('--border-color', '#e5e7eb');
+      root.style.setProperty('--accent-color', '#3b82f6');
+      
+      body.style.backgroundColor = '#ffffff';
+      body.style.color = '#1f2937';
+      
+      const appContent = document.getElementById('app') || body;
+      appContent.style.backgroundColor = '#ffffff';
+      appContent.style.color = '#1f2937';
+      
+      // Remove dark theme styles
+      const darkThemeStyle = document.getElementById('dark-theme-style');
+      if (darkThemeStyle) darkThemeStyle.remove();
+    }
   }
 
   // ============ UPDATE UI ============
@@ -305,6 +437,22 @@
       const config = settingsConfig[setting];
       const indicators = option.querySelectorAll('.level-indicator');
       const img = option.querySelector('img');
+      
+      // Special handling for theme toggle
+      if (setting === 'theme') {
+        const isActive = state.theme === 'dark';
+        option.setAttribute('data-active', isActive);
+        if (isActive) {
+          option.style.borderColor = 'rgba(147, 197, 253, 1)';
+          option.style.background = 'rgba(219, 234, 254, 1)';
+          if (img) img.style.filter = 'brightness(0) invert(1)';
+        } else {
+          option.style.borderColor = '#e5e7eb';
+          option.style.background = '#f9fafb';
+          if (img) img.style.filter = 'brightness(0.5)';
+        }
+        return;
+      }
       
       // Update button styling
       if (currentLevel > 0) {
