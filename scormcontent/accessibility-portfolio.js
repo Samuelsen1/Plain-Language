@@ -9,7 +9,9 @@
     textSpacing: 0,
     dyslexia: 0,
     focusIndicator: 0,
-    hideImages: 0
+    hideImages: 0,
+    textToSpeech: 0,
+    saturation: 0
   };
 
   // Settings configuration for e-learning
@@ -19,7 +21,9 @@
     textSpacing: { levels: 2, binary: false },
     dyslexia: { levels: 2, binary: false },
     focusIndicator: { levels: 2, binary: false },
-    hideImages: { levels: 1, binary: true }
+    hideImages: { levels: 1, binary: true },
+    textToSpeech: { levels: 1, binary: true },
+    saturation: { levels: 2, binary: false }
   };
 
   // ============ LOAD FROM LOCALSTORAGE ============
@@ -68,7 +72,7 @@
     const body = document.body;
     const appContent = document.getElementById('app') || body;
 
-    // Reset filters first
+    // Build filters array
     let filters = [];
 
     // Contrast - apply to learning content
@@ -78,7 +82,14 @@
       filters.push('contrast(1.6)', 'brightness(1.15)');
     }
 
-    // Apply contrast filter to app content
+    // Saturation - adjust color saturation
+    if (state.saturation === 1) {
+      filters.push('saturate(1.5)');
+    } else if (state.saturation === 2) {
+      filters.push('saturate(2)');
+    }
+
+    // Apply all filters to app content
     if (filters.length > 0) {
       appContent.style.filter = filters.join(' ');
     } else {
@@ -293,6 +304,49 @@
       const style = document.getElementById('focus-indicator-style');
       if (style) style.remove();
     }
+
+    // Text to Speech - enable text selection reading
+    if (state.textToSpeech === 1) {
+      enableTextToSpeech();
+    } else {
+      disableTextToSpeech();
+    }
+  }
+
+  // ============ TEXT TO SPEECH FUNCTIONS ============
+  let speechSynthesis = window.speechSynthesis;
+  let textToSpeechHandler = null;
+
+  function enableTextToSpeech() {
+    if (textToSpeechHandler) return; // Already enabled
+
+    textToSpeechHandler = function(event) {
+      const selectedText = window.getSelection().toString().trim();
+      if (selectedText.length > 0) {
+        // Cancel any ongoing speech
+        speechSynthesis.cancel();
+        
+        // Create and speak the utterance
+        const utterance = new SpeechSynthesisUtterance(selectedText);
+        utterance.rate = 0.9;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+        speechSynthesis.speak(utterance);
+      }
+    };
+
+    document.addEventListener('mouseup', textToSpeechHandler);
+    document.addEventListener('touchend', textToSpeechHandler);
+  }
+
+  function disableTextToSpeech() {
+    if (textToSpeechHandler) {
+      document.removeEventListener('mouseup', textToSpeechHandler);
+      document.removeEventListener('touchend', textToSpeechHandler);
+      textToSpeechHandler = null;
+    }
+    // Cancel any ongoing speech
+    speechSynthesis.cancel();
   }
 
   // ============ UPDATE UI ============
