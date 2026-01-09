@@ -316,9 +316,44 @@
   // ============ TEXT TO SPEECH FUNCTIONS ============
   let speechSynthesis = window.speechSynthesis;
   let textToSpeechHandler = null;
+  let ttsTooltip = null;
 
   function enableTextToSpeech() {
     if (textToSpeechHandler) return; // Already enabled
+
+    // Create instruction tooltip
+    ttsTooltip = document.createElement('div');
+    ttsTooltip.id = 'tts-tooltip';
+    ttsTooltip.innerHTML = '🔊 Text-to-Speech Active: Select any text to hear it read aloud';
+    ttsTooltip.style.cssText = `
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+      z-index: 999999;
+      animation: slideInDown 0.3s ease-out;
+      pointer-events: none;
+    `;
+    document.body.appendChild(ttsTooltip);
+
+    // Remove tooltip after 4 seconds
+    setTimeout(() => {
+      if (ttsTooltip && ttsTooltip.parentNode) {
+        ttsTooltip.style.animation = 'slideOutUp 0.3s ease-out';
+        setTimeout(() => {
+          if (ttsTooltip && ttsTooltip.parentNode) {
+            ttsTooltip.remove();
+          }
+        }, 300);
+      }
+    }, 4000);
 
     textToSpeechHandler = function(event) {
       const selectedText = window.getSelection().toString().trim();
@@ -331,12 +366,79 @@
         utterance.rate = 0.9;
         utterance.pitch = 1;
         utterance.volume = 1;
+        
+        // Visual feedback when speaking
+        utterance.onstart = function() {
+          // Add speaking indicator
+          const indicator = document.createElement('div');
+          indicator.id = 'tts-speaking-indicator';
+          indicator.innerHTML = '🔊 Speaking...';
+          indicator.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(34, 197, 94, 0.95);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+            z-index: 999999;
+            animation: pulse 1s infinite;
+          `;
+          document.body.appendChild(indicator);
+        };
+        
+        utterance.onend = function() {
+          // Remove speaking indicator
+          const indicator = document.getElementById('tts-speaking-indicator');
+          if (indicator) indicator.remove();
+        };
+        
         speechSynthesis.speak(utterance);
       }
     };
 
     document.addEventListener('mouseup', textToSpeechHandler);
     document.addEventListener('touchend', textToSpeechHandler);
+    
+    // Add CSS animation styles
+    const style = document.createElement('style');
+    style.id = 'tts-animations';
+    style.textContent = `
+      @keyframes slideInDown {
+        from {
+          opacity: 0;
+          transform: translateX(-50%) translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(-50%) translateY(0);
+        }
+      }
+      @keyframes slideOutUp {
+        from {
+          opacity: 1;
+          transform: translateX(-50%) translateY(0);
+        }
+        to {
+          opacity: 0;
+          transform: translateX(-50%) translateY(-20px);
+        }
+      }
+      @keyframes pulse {
+        0%, 100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+      }
+    `;
+    if (!document.getElementById('tts-animations')) {
+      document.head.appendChild(style);
+    }
   }
 
   function disableTextToSpeech() {
@@ -345,6 +447,21 @@
       document.removeEventListener('touchend', textToSpeechHandler);
       textToSpeechHandler = null;
     }
+    
+    // Remove tooltip if still visible
+    if (ttsTooltip && ttsTooltip.parentNode) {
+      ttsTooltip.remove();
+      ttsTooltip = null;
+    }
+    
+    // Remove speaking indicator if active
+    const indicator = document.getElementById('tts-speaking-indicator');
+    if (indicator) indicator.remove();
+    
+    // Remove animation styles
+    const style = document.getElementById('tts-animations');
+    if (style) style.remove();
+    
     // Cancel any ongoing speech
     speechSynthesis.cancel();
   }
