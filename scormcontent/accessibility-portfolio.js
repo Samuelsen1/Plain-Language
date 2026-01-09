@@ -340,6 +340,10 @@
       z-index: 999999;
       animation: slideInDown 0.3s ease-out;
       pointer-events: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
     `;
     document.body.appendChild(ttsTooltip);
 
@@ -386,6 +390,11 @@
             box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
             z-index: 999999;
             animation: pulse 1s infinite;
+            pointer-events: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
           `;
           document.body.appendChild(indicator);
         };
@@ -446,6 +455,14 @@
       document.removeEventListener('mouseup', textToSpeechHandler);
       document.removeEventListener('touchend', textToSpeechHandler);
       textToSpeechHandler = null;
+    }
+    
+    // Clear any text selection
+    if (window.getSelection) {
+      const selection = window.getSelection();
+      if (selection.removeAllRanges) {
+        selection.removeAllRanges();
+      }
     }
     
     // Remove tooltip if still visible
