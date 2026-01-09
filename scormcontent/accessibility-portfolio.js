@@ -344,62 +344,123 @@
       const darkThemeStyle = document.getElementById('dark-theme-style') || document.createElement('style');
       darkThemeStyle.id = 'dark-theme-style';
       darkThemeStyle.textContent = `
-        body, body *, #app, #app * {
+        /* Apply dark theme to body and main content areas only */
+        body {
           background-color: #1a1a1a !important;
           color: #e5e5e5 !important;
-          border-color: #404040 !important;
         }
+        
+        #app {
+          background-color: #1a1a1a !important;
+          color: #e5e5e5 !important;
+        }
+        
+        /* Text elements */
+        body p, body div:not([class*="video"]):not([class*="player"]):not([class*="multimedia"]):not([class*="interactive"]):not([class*="scenario"]) {
+          background-color: #1a1a1a !important;
+          color: #e5e5e5 !important;
+        }
+        
         body h1, body h2, body h3, body h4, body h5, body h6 {
           color: #ffffff !important;
+          background-color: transparent !important;
         }
+        
         body a {
           color: #60a5fa !important;
         }
         body a:hover {
           color: #93c5fd !important;
         }
-        body button {
+        
+        body button:not(#accessibility-container button):not([class*="video"] button):not([class*="player"] button):not([class*="scenario"] button) {
           background-color: #2d2d2d !important;
           color: #e5e5e5 !important;
           border-color: #404040 !important;
         }
-        body button:hover {
+        body button:not(#accessibility-container button):hover {
           background-color: #404040 !important;
         }
+        
         body input, body textarea, body select {
           background-color: #2d2d2d !important;
           color: #e5e5e5 !important;
           border-color: #404040 !important;
         }
+        
         /* Preserve accessibility panel styling */
         #accessibility-container,
-        #accessibility-container * {
+        #accessibility-container *,
+        #accessibility-panel,
+        #accessibility-panel *,
+        #accessibility-toggle,
+        #accessibility-toggle * {
           background-color: #ffffff !important;
           color: #1f2937 !important;
           border-color: #e5e7eb !important;
         }
-        #accessibility-container .accessibility-option img {
+        
+        #accessibility-container .accessibility-option img,
+        #accessibility-panel .accessibility-option img {
           filter: brightness(0.5) !important;
         }
-        #accessibility-container .accessibility-option[data-active="true"] {
+        
+        #accessibility-container .accessibility-option[data-active="true"],
+        #accessibility-panel .accessibility-option[data-active="true"] {
           background-color: #dbeafe !important;
           border-color: #93c5fd !important;
         }
-        #accessibility-container .accessibility-option[data-active="true"] img {
+        
+        #accessibility-container .accessibility-option[data-active="true"] img,
+        #accessibility-panel .accessibility-option[data-active="true"] img {
           filter: brightness(0) invert(1) !important;
         }
-        /* Exclude video players and interactive scenarios from dark theme */
-        video, video *, 
+        
+        /* EXCLUDE: Video players, multimedia, and interactive elements */
+        video, video *,
         iframe, iframe *,
-        [class*="video"], [class*="video"] *,
-        [class*="player"], [class*="player"] *,
-        [class*="scenario"], [class*="scenario"] *,
-        [class*="interactive"], [class*="interactive"] *,
-        [data-block-type="multimedia"], [data-block-type="multimedia"] *,
-        [data-block-type="interactive"], [data-block-type="interactive"] * {
-          background-color: initial !important;
-          color: initial !important;
-          border-color: initial !important;
+        [class*="video"],
+        [class*="video"] *,
+        [class*="Video"],
+        [class*="Video"] *,
+        [class*="player"],
+        [class*="player"] *,
+        [class*="Player"],
+        [class*="Player"] *,
+        [class*="multimedia"],
+        [class*="multimedia"] *,
+        [class*="Multimedia"],
+        [class*="Multimedia"] *,
+        [class*="scenario"],
+        [class*="scenario"] *,
+        [class*="Scenario"],
+        [class*="Scenario"] *,
+        [class*="interactive"],
+        [class*="interactive"] *,
+        [class*="Interactive"],
+        [class*="Interactive"] *,
+        [data-block-type="multimedia"],
+        [data-block-type="multimedia"] *,
+        [data-block-type="interactive"],
+        [data-block-type="interactive"] *,
+        [role="dialog"],
+        [role="dialog"] *,
+        .rise-multimedia,
+        .rise-multimedia *,
+        .rise-video,
+        .rise-video *,
+        .rise-interactive,
+        .rise-interactive * {
+          background-color: revert !important;
+          color: revert !important;
+          border-color: revert !important;
+          filter: none !important;
+        }
+        
+        /* Keep all images unaffected */
+        img {
+          filter: none !important;
+          background-color: transparent !important;
         }
       `;
       if (!darkThemeStyle.parentNode) {
