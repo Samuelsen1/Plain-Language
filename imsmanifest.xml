@@ -1,0 +1,108 @@
+<?xml version="1.0" ?>
+<manifest identifier="FiE2TP8a5h3idW-BYo4eAXiliDewqDhN20WiYUSc" version="1"
+  xmlns="http://www.imsproject.org/xsd/imscp_rootv1p1p2"
+  xmlns:adlcp="http://www.adlnet.org/xsd/adlcp_rootv1p2"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.imsproject.org/xsd/imscp_rootv1p1p2 imscp_rootv1p1p2.xsd
+                      http://www.adlnet.org/xsd/adlcp_rootv1p2 adlcp_rootv1p2.xsd">
+  <metadata>
+    <schema>ADL SCORM</schema>
+    <schemaversion>1.2</schemaversion>
+    <adlcp:location>metadata.xml</adlcp:location> 
+  </metadata>
+  <organizations default="articulate_rise">
+      <organization identifier="articulate_rise">
+      <title>Plain Language &amp; Inclusive Communication in the Workplace</title>
+      <item identifier="i1" identifierref="r1" isvisible="true">
+        <title>Plain Language &amp; Inclusive Communication in the Workplace</title>
+        <adlcp:datafromlms>eyJjcHYiOiIyMFdpWVVTYyIsInJsZCI6ZmFsc2V9</adlcp:datafromlms>
+      </item>
+    </organization>
+  </organizations>
+  <resources>
+    <resource identifier="r1" type="webcontent" adlcp:scormtype="sco" href="scormdriver/indexAPI.html">
+      <!-- SCORMDRIVER STUFF -->
+      <file href="scormdriver/indexAPI.html" />
+      <file href="scormdriver/preloadIntegrity.js" />
+      <file href="scormdriver/driverOptions.js" />
+      <file href="scormdriver/AICCComm.html" />
+      <file href="scormdriver/auto-scripts/AutoBookmark.js" />
+      <file href="scormdriver/auto-scripts/AutoCompleteSCO.js" />
+      <file href="scormdriver/auto-scripts/CourseExit.js" />
+      <file href="scormdriver/blank.html" />
+      <file href="scormdriver/goodbye.html" />
+      <file href="scormdriver/scormdriver.js" />
+      <file href="scormdriver/browsersniff.js" />
+
+      <!-- RUNTIME COMMON STUFF -->
+      <file href="scormcontent/index.html" />
+
+      
+        <file href="scormcontent/lib/fonts/icomoon.ttf"/>
+        <file href="scormcontent/lib/fonts/icomoon.woff"/>
+
+        <file href="scormcontent/lib/icomoon.css"/>
+        <file href="scormcontent/lib/player-0.0.11.min.js"/>
+        <file href="scormcontent/lib/lzwcompress.js"/>
+      
+
+      <!-- FRONTEND BUNDLE ASSETS -->
+      <file href="scormcontent/lib/rise/05fd6ccd.js" />
+<file href="scormcontent/lib/rise/2ed4ce75.css" />
+<file href="scormcontent/lib/rise/4b152641.js" />
+<file href="scormcontent/lib/rise/9f3e505e.css" />
+<file href="scormcontent/lib/rise/28e345f8.js" />
+<file href="scormcontent/lib/rise/9604e765.js" />
+<file href="scormcontent/lib/rise/4c24aed9.js" />
+<file href="scormcontent/lib/rise/807b83f7.js" />
+<file href="scormcontent/lib/rise/59b79c36.js" />
+<file href="scormcontent/lib/rise/c92c4ae8.js" />
+<file href="scormcontent/lib/rise/3446e6bc.js" />
+<file href="scormcontent/lib/rise/0bcec83e.js" />
+<file href="scormcontent/lib/rise/9dba2384.js" />
+<file href="scormcontent/lib/rise/1c4627d5.js" />
+<file href="scormcontent/lib/mondrian/entry.js" />
+<file href="scormcontent/lib/mondrian/d7a3e0db.js" />
+<file href="scormcontent/lib/mondrian/5a497a28.js" />
+<file href="scormcontent/lib/mondrian/4f412b2b.js" />
+<file href="scormcontent/lib/mondrian/09e37aee.js" />
+<file href="scormcontent/lib/mondrian/196251cf.js" />
+<file href="scormcontent/lib/sandbox/sandbox.html" />
+<file href="scormcontent/lib/sandbox/d12736b8.js" />
+<file href="scormcontent/lib/sandbox/4adfab46.css" />
+
+
+      <!-- RUNTIME CONTENT STUFF -->
+      <file href="scormcontent/lib/fonts/Cormorant-Light.woff" />
+<file href="scormcontent/lib/fonts/Cormorant-Regular.woff" />
+<file href="scormcontent/lib/fonts/Cormorant-Italic.woff" />
+<file href="scormcontent/lib/fonts/Cormorant-Bold.woff" />
+<file href="scormcontent/lib/fonts/Montserrat-Light.woff" />
+<file href="scormcontent/lib/fonts/Montserrat-Regular.woff" />
+<file href="scormcontent/lib/fonts/Montserrat-Medium.woff" />
+<file href="scormcontent/lib/fonts/Montserrat-Italic.woff" />
+<file href="scormcontent/lib/fonts/Montserrat-SemiBold.woff" />
+<file href="scormcontent/lib/fonts/Montserrat-Bold.woff" />
+<file href="scormcontent/lib/fonts/Montserrat-Black.woff" />
+<file href="scormcontent/assets/small.png" />
+<file href="scormcontent/assets/cover-image-0.jpg" />
+<file href="scormcontent/assets/city.jpg" />
+<file href="scormcontent/assets/invideo-ai-1080%20Stop%20the%20Jargon.%20Start%20Including%20Everyon%202025-09-16.mp4" />
+<file href="scormcontent/assets/invideo-ai-1080%20Stop%20the%20Jargon.%20Start%20Including%20Everyon%202025-09-16.jpg" />
+<file href="scormcontent/assets/corporate-space.jpg" />
+<file href="scormcontent/assets/mejfXE2PRvAR8QtX_194_full.png" />
+<file href="scormcontent/assets/RMyE8RyNgKYfxbdF_111_full.png" />
+<file href="scormcontent/assets/XLFB5so_Y4LBm2Ml_166_full.png" />
+<file href="scormcontent/assets/8NykivT8wtGwC_HM_200_full.png" />
+<file href="scormcontent/assets/EXelK71TX7NonzKw_108_full.png" />
+<file href="scormcontent/assets/Xbp7UUyuObhssXaT_163_full.png" />
+<file href="scormcontent/assets/b_b6FPZmE-iAY1jf_211_full.png" />
+<file href="scormcontent/assets/UnS0Sz-Svp4lQeAo_224_full.png" />
+<file href="scormcontent/assets/Pe6V6V_iYEEr2AsV_235_full.png" />
+<file href="scormcontent/assets/tzlwRPAmIvOIjEKk_234_full.png" />
+<file href="scormcontent/assets/a3s6F1f73Y0_5HPy_177_full.png" />
+<file href="scormcontent/assets/1-9bEbeoLmwEfExc_225_full.png" />
+
+    </resource>
+  </resources>
+</manifest>
