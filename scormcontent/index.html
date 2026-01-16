@@ -375,11 +375,11 @@ function exit() {
     LMSProxy.ConcedeControl();
     // If ConcedeControl doesn't redirect/close, manually navigate to goodbye page
     setTimeout(function() {
-      window.location.href = '../scormdriver/goodbye.html';
+      window.location.href = 'goodbye.html';
     }, 500);
   } catch(e) {
     // Fallback: redirect to goodbye page
-    window.location.href = '../scormdriver/goodbye.html';
+    window.location.href = 'goodbye.html';
   }
 }
 
