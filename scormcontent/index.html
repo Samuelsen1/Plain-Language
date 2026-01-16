@@ -370,16 +370,36 @@ function setLocale(locale) {
 
 
 function exit() {
-  // Try SCORM exit first, but if that fails (local development), redirect to goodbye page
+  // Check if course is completed
+  var isCompleted = false;
+  try {
+    var status = LMSProxy.GetStatus();
+    // Check if status indicates completion
+    isCompleted = (status === 'completed' || status === 'passed');
+  } catch(e) {
+    // If we can't get status, check local progress
+    try {
+      var progress = getProgress();
+      // You can add custom completion logic here if needed
+      // For now, we'll assume incomplete if status check failed
+    } catch(err) {
+      // Keep isCompleted as false
+    }
+  }
+  
+  // Determine which goodbye page to show
+  var goodbyePage = isCompleted ? 'goodbye.html' : 'goodbye-incomplete.html';
+  
+  // Try SCORM exit first, but if that fails (local development), redirect to appropriate goodbye page
   try {
     LMSProxy.ConcedeControl();
     // If ConcedeControl doesn't redirect/close, manually navigate to goodbye page
     setTimeout(function() {
-      window.location.href = 'goodbye.html';
+      window.location.href = goodbyePage;
     }, 500);
   } catch(e) {
-    // Fallback: redirect to goodbye page
-    window.location.href = 'goodbye.html';
+    // Fallback: redirect to appropriate goodbye page
+    window.location.href = goodbyePage;
   }
 }
 
