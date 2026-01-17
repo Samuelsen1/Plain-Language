@@ -811,7 +811,13 @@
       scheduled: false,
       observer: null,
       lastHash: '',
+      infographicSection: null,
+      lastKeySectionId: null,
+      placementTimeout: null,
     };
+
+    const INFographic_ID = 'key-principles-infographic-injected';
+    const OBSERVER_DEBOUNCE = 500; // Debounce observer calls
 
     /**
      * Find the Key Principles section
@@ -857,6 +863,7 @@
         section.className = templateSection.className;
       }
       section.classList.add('key-principles-infographic-section');
+      section.id = INFographic_ID;
       section.dataset.injected = 'key-principles';
       section.setAttribute('aria-label', 'Key Principles of Plain Language Infographic');
 
@@ -889,6 +896,27 @@
     }
 
     /**
+     * Check if infographic is already correctly positioned
+     */
+    function isCorrectlyPositioned(infographicSection, parentContainer, desiredSibling) {
+      if (!infographicSection || !infographicSection.isConnected) {
+        return false;
+      }
+      
+      if (infographicSection.parentNode !== parentContainer) {
+        return false;
+      }
+      
+      // Check if it's in the right position relative to desired sibling
+      if (desiredSibling) {
+        return infographicSection.nextSibling === desiredSibling;
+      }
+      
+      // If no desired sibling, check if it's after the key section
+      return true;
+    }
+
+    /**
      * Ensure infographic is placed correctly
      */
     function ensureInfographicPlacement() {
@@ -902,62 +930,118 @@
 
       // Remove infographic if not on relevant lesson
       if (!keySection) {
-        document.querySelectorAll('.key-principles-infographic-section').forEach(node => node.remove());
+        if (STATE.infographicSection?.isConnected) {
+          STATE.infographicSection.remove();
+          STATE.infographicSection = null;
+        }
+        // Also remove any orphaned sections
+        document.querySelectorAll('.key-principles-infographic-section').forEach(node => {
+          if (node.id !== INFographic_ID || node !== STATE.infographicSection) {
+            node.remove();
+          }
+        });
         STATE.lastHash = currentHash;
+        STATE.lastKeySectionId = null;
         return;
       }
+
+      // Get a stable identifier for the key section
+      const keySectionId = keySection.id || 
+                          Array.from(keySection.parentNode?.children || []).indexOf(keySection) ||
+                          keySection.textContent?.substring(0, 50);
 
       const parentContainer = keySection.parentNode;
       if (!parentContainer) return;
 
       const usingSection = findUsingShortSentencesSection(parentContainer);
-      const infographicSections = Array.from(document.querySelectorAll('.key-principles-infographic-section'));
-      let infographicSection = infographicSections.shift();
+      const desiredSibling = usingSection || keySection.nextSibling;
 
-      // Remove duplicates
-      infographicSections.forEach(node => node.remove());
+      // Get or create infographic section
+      let infographicSection = STATE.infographicSection || document.getElementById(INFographic_ID);
+      
+      // Remove any duplicates (shouldn't happen, but safety check)
+      document.querySelectorAll('.key-principles-infographic-section').forEach(node => {
+        if (node !== infographicSection && node.id !== INFographic_ID) {
+          node.remove();
+        }
+      });
 
+      // Create section if needed
       if (!infographicSection || !infographicSection.isConnected) {
         infographicSection = createInfographicSection(keySection);
+        STATE.infographicSection = infographicSection;
       }
 
-      // Move section if needed
-      if (infographicSection.parentNode !== parentContainer) {
-        parentContainer.insertBefore(infographicSection, usingSection || keySection.nextSibling);
-      } else {
-        const desiredSibling = usingSection || keySection.nextSibling;
-        if (desiredSibling && infographicSection.nextSibling !== desiredSibling) {
+      // Only move if incorrectly positioned
+      if (!isCorrectlyPositioned(infographicSection, parentContainer, desiredSibling)) {
+        // Use insertBefore for stable positioning
+        if (desiredSibling && desiredSibling.parentNode === parentContainer) {
           parentContainer.insertBefore(infographicSection, desiredSibling);
-        } else if (!desiredSibling && infographicSection.nextSibling !== null) {
-          parentContainer.appendChild(infographicSection);
+        } else if (keySection.nextSibling && keySection.nextSibling !== infographicSection) {
+          parentContainer.insertBefore(infographicSection, keySection.nextSibling);
+        } else if (!keySection.nextSibling || keySection.nextSibling === infographicSection) {
+          // Already in correct position or no specific position needed
+          if (infographicSection.parentNode !== parentContainer) {
+            parentContainer.appendChild(infographicSection);
+          }
         }
       }
 
       STATE.lastHash = currentHash;
+      STATE.lastKeySectionId = keySectionId;
     }
 
     /**
-     * Schedule placement using requestAnimationFrame
+     * Debounced placement function
+     */
+    const debouncedPlacement = debounce(() => {
+      ensureInfographicPlacement();
+    }, OBSERVER_DEBOUNCE);
+
+    /**
+     * Schedule placement using requestAnimationFrame with debouncing
      */
     function schedulePlacement() {
       if (STATE.scheduled) return;
       STATE.scheduled = true;
+      
+      // Clear any pending timeout
+      if (STATE.placementTimeout) {
+        clearTimeout(STATE.placementTimeout);
+      }
+      
       requestAnimationFrame(() => {
         STATE.scheduled = false;
-        ensureInfographicPlacement();
+        // Use debounced placement to prevent excessive calls
+        debouncedPlacement();
       });
     }
 
     /**
-     * Start observing DOM changes
+     * Start observing DOM changes with filtering
      */
     function startObserver() {
       if (STATE.observer) return;
       const appContainer = document.querySelector('#app');
       if (!appContainer) return;
 
-      STATE.observer = new MutationObserver(() => {
-        schedulePlacement();
+      STATE.observer = new MutationObserver((mutations) => {
+        // Filter out mutations caused by our own infographic
+        const relevantMutations = mutations.filter(mutation => {
+          // Ignore mutations on our own infographic section
+          for (const node of mutation.addedNodes) {
+            if (node.id === INFographic_ID || 
+                node.classList?.contains('key-principles-infographic-section') ||
+                node.querySelector?.('#' + INFographic_ID)) {
+              return false;
+            }
+          }
+          return true;
+        });
+
+        if (relevantMutations.length > 0) {
+          schedulePlacement();
+        }
       });
 
       STATE.observer.observe(appContainer, {
@@ -974,6 +1058,45 @@
         STATE.observer.disconnect();
         STATE.observer = null;
       }
+      if (STATE.placementTimeout) {
+        clearTimeout(STATE.placementTimeout);
+        STATE.placementTimeout = null;
+      }
+    }
+
+    /**
+     * Handle hash change with stability checks
+     */
+    function handleHashChange() {
+      const currentHash = window.location.hash;
+      
+      // Only reset if hash actually changed
+      if (currentHash === STATE.lastHash) {
+        return;
+      }
+
+      stopObserver();
+      
+      // Only remove if we're leaving the relevant page
+      const appContainer = document.querySelector('#app');
+      const keySection = appContainer ? findKeyPrinciplesSection(appContainer) : null;
+      
+      if (!keySection && STATE.infographicSection?.isConnected) {
+        STATE.infographicSection.remove();
+        STATE.infographicSection = null;
+      }
+      
+      // Clean up any orphaned sections
+      document.querySelectorAll('.key-principles-infographic-section').forEach(node => {
+        if (node.id !== INFographic_ID || node !== STATE.infographicSection) {
+          node.remove();
+        }
+      });
+
+      STATE.placementTimeout = setTimeout(() => {
+        ensureInfographicPlacement();
+        startObserver();
+      }, INFographic_HASH_DELAY);
     }
 
     // Initial placement
@@ -983,13 +1106,11 @@
     }, INFographic_DELAY);
 
     // Re-run on navigation
-    window.addEventListener('hashchange', () => {
-      stopObserver();
-      document.querySelectorAll('.key-principles-infographic-section').forEach(node => node.remove());
-      setTimeout(() => {
-        ensureInfographicPlacement();
-        startObserver();
-      }, INFographic_HASH_DELAY);
+    window.addEventListener('hashchange', handleHashChange);
+    
+    // Also listen for popstate (back/forward navigation)
+    window.addEventListener('popstate', () => {
+      setTimeout(handleHashChange, 100);
     });
   }
 
