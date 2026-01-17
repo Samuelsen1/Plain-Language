@@ -812,12 +812,9 @@
       observer: null,
       lastHash: '',
       infographicSection: null,
-      lastKeySectionId: null,
-      placementTimeout: null,
     };
 
     const INFographic_ID = 'key-principles-infographic-injected';
-    const OBSERVER_DEBOUNCE = 500; // Debounce observer calls
 
     /**
      * Find the Key Principles section
@@ -896,27 +893,6 @@
     }
 
     /**
-     * Check if infographic is already correctly positioned
-     */
-    function isCorrectlyPositioned(infographicSection, parentContainer, desiredSibling) {
-      if (!infographicSection || !infographicSection.isConnected) {
-        return false;
-      }
-      
-      if (infographicSection.parentNode !== parentContainer) {
-        return false;
-      }
-      
-      // Check if it's in the right position relative to desired sibling
-      if (desiredSibling) {
-        return infographicSection.nextSibling === desiredSibling;
-      }
-      
-      // If no desired sibling, check if it's after the key section
-      return true;
-    }
-
-    /**
      * Ensure infographic is placed correctly
      */
     function ensureInfographicPlacement() {
@@ -930,25 +906,14 @@
 
       // Remove infographic if not on relevant lesson
       if (!keySection) {
-        if (STATE.infographicSection?.isConnected) {
-          STATE.infographicSection.remove();
+        const existing = document.getElementById(INFographic_ID);
+        if (existing) {
+          existing.remove();
           STATE.infographicSection = null;
         }
-        // Also remove any orphaned sections
-        document.querySelectorAll('.key-principles-infographic-section').forEach(node => {
-          if (node.id !== INFographic_ID || node !== STATE.infographicSection) {
-            node.remove();
-          }
-        });
         STATE.lastHash = currentHash;
-        STATE.lastKeySectionId = null;
         return;
       }
-
-      // Get a stable identifier for the key section
-      const keySectionId = keySection.id || 
-                          Array.from(keySection.parentNode?.children || []).indexOf(keySection) ||
-                          keySection.textContent?.substring(0, 50);
 
       const parentContainer = keySection.parentNode;
       if (!parentContainer) return;
@@ -956,69 +921,79 @@
       const usingSection = findUsingShortSentencesSection(parentContainer);
       const desiredSibling = usingSection || keySection.nextSibling;
 
-      // Get or create infographic section
-      let infographicSection = STATE.infographicSection || document.getElementById(INFographic_ID);
+      // Get existing infographic or create new one
+      let infographicSection = document.getElementById(INFographic_ID);
       
-      // Remove any duplicates (shouldn't happen, but safety check)
-      document.querySelectorAll('.key-principles-infographic-section').forEach(node => {
-        if (node !== infographicSection && node.id !== INFographic_ID) {
-          node.remove();
-        }
-      });
+      // Remove any duplicates (keep only one)
+      const allInfographics = document.querySelectorAll('.key-principles-infographic-section');
+      if (allInfographics.length > 1) {
+        allInfographics.forEach(node => {
+          if (node.id !== INFographic_ID) {
+            node.remove();
+          }
+        });
+        infographicSection = document.getElementById(INFographic_ID);
+      }
 
-      // Create section if needed
-      if (!infographicSection || !infographicSection.isConnected) {
+      // Create if doesn't exist
+      if (!infographicSection) {
         infographicSection = createInfographicSection(keySection);
         STATE.infographicSection = infographicSection;
       }
 
-      // Only move if incorrectly positioned
-      if (!isCorrectlyPositioned(infographicSection, parentContainer, desiredSibling)) {
-        // Use insertBefore for stable positioning
+      // Only move if not already in correct position
+      const isInCorrectParent = infographicSection.parentNode === parentContainer;
+      const isInCorrectPosition = desiredSibling 
+        ? infographicSection.nextSibling === desiredSibling
+        : (keySection.nextSibling === infographicSection || !keySection.nextSibling);
+
+      if (!isInCorrectParent || !isInCorrectPosition) {
+        // Temporarily disconnect observer to prevent feedback loop
+        if (STATE.observer) {
+          STATE.observer.disconnect();
+        }
+        
+        // Place the section
         if (desiredSibling && desiredSibling.parentNode === parentContainer) {
           parentContainer.insertBefore(infographicSection, desiredSibling);
         } else if (keySection.nextSibling && keySection.nextSibling !== infographicSection) {
           parentContainer.insertBefore(infographicSection, keySection.nextSibling);
-        } else if (!keySection.nextSibling || keySection.nextSibling === infographicSection) {
-          // Already in correct position or no specific position needed
+        } else {
           if (infographicSection.parentNode !== parentContainer) {
             parentContainer.appendChild(infographicSection);
           }
         }
+        
+        // Reconnect observer after a brief delay
+        if (STATE.observer) {
+          setTimeout(() => {
+            if (STATE.observer && appContainer) {
+              STATE.observer.observe(appContainer, {
+                childList: true,
+                subtree: true,
+              });
+            }
+          }, 100);
+        }
       }
 
       STATE.lastHash = currentHash;
-      STATE.lastKeySectionId = keySectionId;
     }
 
     /**
-     * Debounced placement function
-     */
-    const debouncedPlacement = debounce(() => {
-      ensureInfographicPlacement();
-    }, OBSERVER_DEBOUNCE);
-
-    /**
-     * Schedule placement using requestAnimationFrame with debouncing
+     * Schedule placement using requestAnimationFrame
      */
     function schedulePlacement() {
       if (STATE.scheduled) return;
       STATE.scheduled = true;
-      
-      // Clear any pending timeout
-      if (STATE.placementTimeout) {
-        clearTimeout(STATE.placementTimeout);
-      }
-      
       requestAnimationFrame(() => {
         STATE.scheduled = false;
-        // Use debounced placement to prevent excessive calls
-        debouncedPlacement();
+        ensureInfographicPlacement();
       });
     }
 
     /**
-     * Start observing DOM changes with filtering
+     * Start observing DOM changes
      */
     function startObserver() {
       if (STATE.observer) return;
@@ -1026,20 +1001,41 @@
       if (!appContainer) return;
 
       STATE.observer = new MutationObserver((mutations) => {
-        // Filter out mutations caused by our own infographic
-        const relevantMutations = mutations.filter(mutation => {
-          // Ignore mutations on our own infographic section
+        // Skip if mutations are only from our infographic
+        let hasRelevantChanges = false;
+        for (const mutation of mutations) {
           for (const node of mutation.addedNodes) {
-            if (node.id === INFographic_ID || 
-                node.classList?.contains('key-principles-infographic-section') ||
-                node.querySelector?.('#' + INFographic_ID)) {
-              return false;
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              // Skip if this is our infographic or contains it
+              if (node.id === INFographic_ID || 
+                  node.classList?.contains('key-principles-infographic-section')) {
+                continue;
+              }
+              // Check if it contains our infographic
+              if (node.querySelector && node.querySelector('#' + INFographic_ID)) {
+                continue;
+              }
+              hasRelevantChanges = true;
+              break;
             }
           }
-          return true;
-        });
-
-        if (relevantMutations.length > 0) {
+          if (hasRelevantChanges) break;
+          
+          for (const node of mutation.removedNodes) {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              // Skip if this is our infographic
+              if (node.id === INFographic_ID || 
+                  node.classList?.contains('key-principles-infographic-section')) {
+                continue;
+              }
+              hasRelevantChanges = true;
+              break;
+            }
+          }
+          if (hasRelevantChanges) break;
+        }
+        
+        if (hasRelevantChanges) {
           schedulePlacement();
         }
       });
@@ -1058,45 +1054,6 @@
         STATE.observer.disconnect();
         STATE.observer = null;
       }
-      if (STATE.placementTimeout) {
-        clearTimeout(STATE.placementTimeout);
-        STATE.placementTimeout = null;
-      }
-    }
-
-    /**
-     * Handle hash change with stability checks
-     */
-    function handleHashChange() {
-      const currentHash = window.location.hash;
-      
-      // Only reset if hash actually changed
-      if (currentHash === STATE.lastHash) {
-        return;
-      }
-
-      stopObserver();
-      
-      // Only remove if we're leaving the relevant page
-      const appContainer = document.querySelector('#app');
-      const keySection = appContainer ? findKeyPrinciplesSection(appContainer) : null;
-      
-      if (!keySection && STATE.infographicSection?.isConnected) {
-        STATE.infographicSection.remove();
-        STATE.infographicSection = null;
-      }
-      
-      // Clean up any orphaned sections
-      document.querySelectorAll('.key-principles-infographic-section').forEach(node => {
-        if (node.id !== INFographic_ID || node !== STATE.infographicSection) {
-          node.remove();
-        }
-      });
-
-      STATE.placementTimeout = setTimeout(() => {
-        ensureInfographicPlacement();
-        startObserver();
-      }, INFographic_HASH_DELAY);
     }
 
     // Initial placement
@@ -1106,11 +1063,17 @@
     }, INFographic_DELAY);
 
     // Re-run on navigation
-    window.addEventListener('hashchange', handleHashChange);
-    
-    // Also listen for popstate (back/forward navigation)
-    window.addEventListener('popstate', () => {
-      setTimeout(handleHashChange, 100);
+    window.addEventListener('hashchange', () => {
+      stopObserver();
+      const existing = document.getElementById(INFographic_ID);
+      if (existing) {
+        existing.remove();
+        STATE.infographicSection = null;
+      }
+      setTimeout(() => {
+        ensureInfographicPlacement();
+        startObserver();
+      }, INFographic_HASH_DELAY);
     });
   }
 
