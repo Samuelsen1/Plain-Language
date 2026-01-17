@@ -699,15 +699,15 @@ root.Runtime = {
     <!-- Portfolio-Style Accessibility & Language Tools -->
     
     <!-- Accessibility Floating Button & Panel -->
-    <div class="fixed bottom-6 left-6 z-50" id="accessibility-container">
+    <div class="fixed bottom-6 left-6 z-50" id="accessibility-container" role="complementary" aria-label="Accessibility controls">
       <!-- Accessibility Panel (Hidden by default) -->
-      <div id="accessibility-panel" class="absolute bottom-20 left-0 w-80 rounded-3xl shadow-2xl backdrop-blur-xl hidden" style="background: rgba(255, 255, 255, 0.95); border: 2px solid rgba(216, 180, 254, 0.3); max-height: 500px;">
+      <div id="accessibility-panel" class="absolute bottom-20 left-0 w-80 rounded-3xl shadow-2xl backdrop-blur-xl hidden" style="background: rgba(255, 255, 255, 0.95); border: 2px solid rgba(216, 180, 254, 0.3); max-height: 500px;" role="dialog" aria-modal="true" aria-labelledby="accessibility-panel-title">
         
         <!-- Header -->
         <div class="flex justify-between items-center px-4 py-3 border-b border-purple-300" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 22px 22px 0 0;">
-          <h3 class="text-white font-semibold text-base m-0">Accessibility Options</h3>
-          <button id="close-panel" class="w-8 h-8 flex items-center justify-center rounded-full bg-transparent hover:bg-white/20 transition-all cursor-pointer border-0" style="color: white;">
-            <span style="font-size: 20px; font-weight: bold;">×</span>
+          <h3 id="accessibility-panel-title" class="text-white font-semibold text-base m-0">Accessibility Options</h3>
+          <button id="close-panel" class="w-8 h-8 flex items-center justify-center rounded-full bg-transparent hover:bg-white/20 transition-all cursor-pointer border-0" style="color: white;" aria-label="Close accessibility panel" title="Close accessibility panel">
+            <span aria-hidden="true" style="font-size: 20px; font-weight: bold;">×</span>
           </button>
         </div>
 
@@ -715,78 +715,78 @@ root.Runtime = {
         <div class="grid grid-cols-2 gap-3 p-4 overflow-y-auto overscroll-contain" style="max-height: 420px;">
           
           <!-- Contrast -->
-          <button class="accessibility-option flex flex-col items-center p-3 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 transition-all cursor-pointer min-h-52px" data-setting="contrast">
-            <img src="images/contrast.png" alt="Contrast" class="w-8 h-8 mb-2" style="filter: brightness(0.5);">
+          <button class="accessibility-option flex flex-col items-center p-3 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 transition-all cursor-pointer min-h-52px" data-setting="contrast" type="button" aria-pressed="false" role="switch" tabindex="0">
+            <img src="images/contrast.png" alt="" class="w-8 h-8 mb-2" style="filter: brightness(0.5);" aria-hidden="true">
             <span class="text-xs text-center font-medium text-gray-700">Contrast</span>
-            <div class="flex gap-2 mt-2 w-full justify-center">
+            <div class="flex gap-2 mt-2 w-full justify-center" aria-hidden="true">
               <span class="level-indicator h-1 w-11 rounded-sm bg-gray-300"></span>
               <span class="level-indicator h-1 w-11 rounded-sm bg-gray-300"></span>
             </div>
           </button>
 
           <!-- Large Text -->
-          <button class="accessibility-option flex flex-col items-center p-3 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 transition-all cursor-pointer min-h-52px" data-setting="largeText">
-            <img src="images/larger-font.png" alt="Large Text" class="w-8 h-8 mb-2" style="filter: brightness(0.5);">
+          <button class="accessibility-option flex flex-col items-center p-3 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 transition-all cursor-pointer min-h-52px" data-setting="largeText" type="button" aria-pressed="false" role="switch" tabindex="0">
+            <img src="images/larger-font.png" alt="" class="w-8 h-8 mb-2" style="filter: brightness(0.5);" aria-hidden="true">
             <span class="text-xs text-center font-medium text-gray-700">Large Text</span>
-            <div class="flex gap-2 mt-2 w-full justify-center">
+            <div class="flex gap-2 mt-2 w-full justify-center" aria-hidden="true">
               <span class="level-indicator h-1 w-11 rounded-sm bg-gray-300"></span>
               <span class="level-indicator h-1 w-11 rounded-sm bg-gray-300"></span>
             </div>
           </button>
 
           <!-- Text Spacing -->
-          <button class="accessibility-option flex flex-col items-center p-3 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 transition-all cursor-pointer min-h-52px" data-setting="textSpacing">
-            <img src="images/spacing.png" alt="Text Spacing" class="w-8 h-8 mb-2" style="filter: brightness(0.5);">
+          <button class="accessibility-option flex flex-col items-center p-3 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 transition-all cursor-pointer min-h-52px" data-setting="textSpacing" type="button" aria-pressed="false" role="switch" tabindex="0">
+            <img src="images/spacing.png" alt="" class="w-8 h-8 mb-2" style="filter: brightness(0.5);" aria-hidden="true">
             <span class="text-xs text-center font-medium text-gray-700">Text Spacing</span>
-            <div class="flex gap-2 mt-2 w-full justify-center">
+            <div class="flex gap-2 mt-2 w-full justify-center" aria-hidden="true">
               <span class="level-indicator h-1 w-11 rounded-sm bg-gray-300"></span>
               <span class="level-indicator h-1 w-11 rounded-sm bg-gray-300"></span>
             </div>
           </button>
 
           <!-- Dyslexia Friendly -->
-          <button class="accessibility-option flex flex-col items-center p-3 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 transition-all cursor-pointer min-h-52px" data-setting="dyslexia">
-            <img src="images/dyslexia.png" alt="Dyslexia Friendly" class="w-8 h-8 mb-2" style="filter: brightness(0.5);">
+          <button class="accessibility-option flex flex-col items-center p-3 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 transition-all cursor-pointer min-h-52px" data-setting="dyslexia" type="button" aria-pressed="false" role="switch" tabindex="0">
+            <img src="images/dyslexia.png" alt="" class="w-8 h-8 mb-2" style="filter: brightness(0.5);" aria-hidden="true">
             <span class="text-xs text-center font-medium text-gray-700">Dyslexia Friendly</span>
-            <div class="flex gap-2 mt-2 w-full justify-center">
+            <div class="flex gap-2 mt-2 w-full justify-center" aria-hidden="true">
               <span class="level-indicator h-1 w-11 rounded-sm bg-gray-300"></span>
               <span class="level-indicator h-1 w-11 rounded-sm bg-gray-300"></span>
             </div>
           </button>
 
           <!-- Focus Indicator -->
-          <button class="accessibility-option flex flex-col items-center p-3 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 transition-all cursor-pointer min-h-52px" data-setting="focusIndicator">
-            <img src="images/focus.png" alt="Focus Indicator" class="w-8 h-8 mb-2" style="filter: brightness(0.5);">
+          <button class="accessibility-option flex flex-col items-center p-3 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 transition-all cursor-pointer min-h-52px" data-setting="focusIndicator" type="button" aria-pressed="false" role="switch" tabindex="0">
+            <img src="images/focus.png" alt="" class="w-8 h-8 mb-2" style="filter: brightness(0.5);" aria-hidden="true">
             <span class="text-xs text-center font-medium text-gray-700">Focus Indicator</span>
-            <div class="flex gap-2 mt-2 w-full justify-center">
+            <div class="flex gap-2 mt-2 w-full justify-center" aria-hidden="true">
               <span class="level-indicator h-1 w-11 rounded-sm bg-gray-300"></span>
               <span class="level-indicator h-1 w-11 rounded-sm bg-gray-300"></span>
             </div>
           </button>
 
           <!-- Hide Images -->
-          <button class="accessibility-option flex flex-col items-center p-3 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 transition-all cursor-pointer min-h-52px" data-setting="hideImages">
-            <img src="images/hide-images.png" alt="Hide Images" class="w-8 h-8 mb-2" style="filter: brightness(0.5);">
+          <button class="accessibility-option flex flex-col items-center p-3 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 transition-all cursor-pointer min-h-52px" data-setting="hideImages" type="button" aria-pressed="false" role="switch" tabindex="0">
+            <img src="images/hide-images.png" alt="" class="w-8 h-8 mb-2" style="filter: brightness(0.5);" aria-hidden="true">
             <span class="text-xs text-center font-medium text-gray-700">Hide Images</span>
-            <div class="flex gap-2 mt-2 w-full justify-center">
+            <div class="flex gap-2 mt-2 w-full justify-center" aria-hidden="true">
               <span class="level-indicator h-1 w-11 rounded-sm bg-gray-300"></span>
             </div>
           </button>
 
           <!-- Text to Speech -->
-          <button class="accessibility-option flex flex-col items-center p-3 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 transition-all cursor-pointer min-h-52px" data-setting="textToSpeech">
-            <img src="images/text-to-speech.png" alt="Text to Speech" class="w-8 h-8 mb-2" style="filter: brightness(0.5);">
+          <button class="accessibility-option flex flex-col items-center p-3 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 transition-all cursor-pointer min-h-52px" data-setting="textToSpeech" type="button" aria-pressed="false" role="switch" tabindex="0">
+            <img src="images/text-to-speech.png" alt="" class="w-8 h-8 mb-2" style="filter: brightness(0.5);" aria-hidden="true">
             <span class="text-xs text-center font-medium text-gray-700">Text to Speech</span>
-            <div class="flex gap-2 mt-2 w-full justify-center">
+            <div class="flex gap-2 mt-2 w-full justify-center" aria-hidden="true">
               <span class="level-indicator h-1 w-11 rounded-sm bg-gray-300"></span>
             </div>
           </button>
 
           <!-- Saturation -->
-          <button class="accessibility-option flex flex-col items-center p-3 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 transition-all cursor-pointer min-h-52px" data-setting="saturation">
-            <img src="images/saturation.png" alt="Saturation" class="w-8 h-8 mb-2" style="filter: brightness(0.5);">
+          <button class="accessibility-option flex flex-col items-center p-3 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 transition-all cursor-pointer min-h-52px" data-setting="saturation" type="button" aria-pressed="false" role="switch" tabindex="0">
+            <img src="images/saturation.png" alt="" class="w-8 h-8 mb-2" style="filter: brightness(0.5);" aria-hidden="true">
             <span class="text-xs text-center font-medium text-gray-700">Saturation</span>
-            <div class="flex gap-2 mt-2 w-full justify-center">
+            <div class="flex gap-2 mt-2 w-full justify-center" aria-hidden="true">
               <span class="level-indicator h-1 w-11 rounded-sm bg-gray-300"></span>
               <span class="level-indicator h-1 w-11 rounded-sm bg-gray-300"></span>
             </div>
@@ -794,8 +794,8 @@ root.Runtime = {
 
           <!-- Reset Button (spans 2 columns) -->
           <div style="grid-column: 1 / -1; margin-top: 8px;">
-            <button id="reset-accessibility" class="w-full py-2-5 px-4 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 font-medium text-sm cursor-pointer transition-all flex items-center justify-center gap-2 text-gray-700">
-              <span style="font-size: 16px;">↻</span>
+            <button id="reset-accessibility" class="w-full py-2-5 px-4 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 font-medium text-sm cursor-pointer transition-all flex items-center justify-center gap-2 text-gray-700" type="button" aria-label="Reset all accessibility settings" title="Reset all accessibility settings">
+              <span aria-hidden="true" style="font-size: 16px;">↻</span>
               <span>Reset All</span>
             </button>
           </div>
@@ -805,8 +805,8 @@ root.Runtime = {
       </div>
 
       <!-- Main Accessibility Button -->
-      <button id="accessibility-toggle" class="w-14 h-14 rounded-full flex items-center justify-center cursor-pointer border-0 transition-all hover:scale-110" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 10px 40px rgba(59, 130, 246, 0.4);">
-        <img src="images/accessibility.png" alt="Accessibility" class="w-10 h-10" style="filter: brightness(0) invert(1);">
+      <button id="accessibility-toggle" class="w-14 h-14 rounded-full flex items-center justify-center cursor-pointer border-0 transition-all hover:scale-110" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 10px 40px rgba(59, 130, 246, 0.4);" type="button" aria-label="Open accessibility options" aria-expanded="false" title="Accessibility options">
+        <img src="images/accessibility.png" alt="" class="w-10 h-10" style="filter: brightness(0) invert(1);" aria-hidden="true">
       </button>
     </div>
 
