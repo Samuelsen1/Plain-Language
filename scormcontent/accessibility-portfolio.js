@@ -71,7 +71,7 @@
         if (!window.localStorage) return false;
         localStorage.setItem(key, JSON.stringify(value));
         return true;
-      } catch (e) {
+    } catch (e) {
         console.warn('Error writing to localStorage:', e);
         return false;
       }
@@ -178,7 +178,55 @@
   }
 
   /**
-   * Toggle a setting value
+   * Check if element is part of Articulate Rise structure
+   */
+  function isRiseElement(element) {
+    if (!element) return false;
+    // Check for Rise-specific classes, IDs, and data attributes
+    const riseSelectors = [
+      '[class*="rise"]', '[id*="rise"]', '[class*="Rise"]', '[id*="Rise"]',
+      '[class*="articulate"]', '[id*="articulate"]',
+      '[class*="player"]', '[id*="player"]',
+      '[class*="navigation"]', '[id*="navigation"]',
+      '[class*="menu"]', '[id*="menu"]',
+      '[class*="sidebar"]', '[id*="sidebar"]',
+      '[class*="header"]', '[id*="header"]',
+      '[class*="footer"]', '[id*="footer"]',
+      '[data-rise]', '[data-articulate]'
+    ];
+    // Check element and its parents
+    let el = element;
+    while (el && el !== document.body) {
+      const classList = el.classList?.toString() || '';
+      const id = el.id || '';
+      const tagName = el.tagName?.toLowerCase() || '';
+      
+      if (riseSelectors.some(sel => {
+        try {
+          return el.matches?.(sel);
+    } catch (e) {
+          return false;
+        }
+      }) || 
+      classList.includes('rise') || classList.includes('Rise') ||
+      classList.includes('articulate') || id.includes('rise') || id.includes('Rise') ||
+      id.includes('articulate') || tagName === 'rise-player' || tagName === 'articulate-player') {
+        return true;
+      }
+      el = el.parentElement;
+    }
+    return false;
+  }
+
+  /**
+   * Get safe selector that excludes Rise elements
+   */
+  function getSafeSelector(baseSelector) {
+    return `${baseSelector}:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]):not([data-rise]):not([data-articulate]):not(rise-player):not(articulate-player)`;
+  }
+
+  /**
+   * Toggle a setting value (async to prevent UI blocking)
    */
   function toggleSetting(setting) {
     const config = settingsConfig[setting];
@@ -188,7 +236,7 @@
     }
 
     const oldValue = state[setting];
-    
+
     if (config.binary) {
       state[setting] = oldValue === 0 ? 1 : 0;
     } else {
@@ -196,12 +244,17 @@
     }
 
     saveSettings();
-    applyAllSettings();
-    updateUI();
     
-    // Announce change to screen readers
-    const level = state[setting] === 0 ? 'off' : `level ${state[setting]}`;
-    announceToScreenReader(`${config.label} ${level}`);
+    // Use requestAnimationFrame to prevent blocking
+    requestAnimationFrame(() => {
+    applyAllSettings();
+      requestAnimationFrame(() => {
+    updateUI();
+        // Announce change to screen readers
+        const level = state[setting] === 0 ? 'off' : `level ${state[setting]}`;
+        announceToScreenReader(`${config.label} ${level}`);
+      });
+    });
   }
 
   // ============ STYLE APPLICATION ============
@@ -217,13 +270,13 @@
     } else if (state.contrast === 2) {
       filters.push('contrast(1.6)', 'brightness(1.15)');
     }
-    
+
     if (state.saturation === 1) {
       filters.push('saturate(1.5)');
     } else if (state.saturation === 2) {
       filters.push('saturate(2)');
     }
-    
+
     if (domCache.app) {
       domCache.app.style.filter = filters.length > 0 ? filters.join(' ') : '';
     }
@@ -238,43 +291,51 @@
       return;
     }
 
-    const baseFontPercent = state.largeText === 1 ? 110 : 124;
-    const globalLineHeight = state.largeText === 1 ? 1.55 : 1.7;
-    const paragraphLineHeight = state.largeText === 1 ? 1.65 : 1.85;
+      const baseFontPercent = state.largeText === 1 ? 110 : 124;
+      const globalLineHeight = state.largeText === 1 ? 1.55 : 1.7;
+      const paragraphLineHeight = state.largeText === 1 ? 1.65 : 1.85;
     
     const style = getOrCreateStyleElement('large-text-style');
     style.textContent = `
-      html {
-        font-size: ${baseFontPercent}% !important;
+        html {
+        font-size: ${baseFontPercent}%;
       }
-      body, #app {
-        overflow-wrap: break-word !important;
-        word-wrap: break-word !important;
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
+      #app:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) {
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        word-break: break-word;
+        hyphens: auto;
       }
-      body, body *:not(#accessibility-container):not(#accessibility-container *) {
-        line-height: ${globalLineHeight} !important;
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) *:not(#accessibility-container):not(#accessibility-container *):not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
+        line-height: ${globalLineHeight};
+        max-width: 100%;
+        box-sizing: border-box;
       }
-      body p,
-      body li,
-      body span,
-      body a,
-      body button,
-      body input,
-      body textarea,
-      body td,
-      body th,
-      body div,
-      body section,
-      body article {
-        line-height: ${paragraphLineHeight} !important;
-      }
-      #accessibility-container {
-        font-size: 14px !important;
-        line-height: 1.5 !important;
-      }
-      #accessibility-container * {
-        font-size: inherit !important;
-        line-height: inherit !important;
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) p,
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) li,
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) span,
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) a,
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) button:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]),
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) input:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]),
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) textarea:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]),
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) td,
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) th,
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) div:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) section:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]),
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) article:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) {
+        line-height: ${paragraphLineHeight};
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        word-break: break-word;
+        }
+        #accessibility-container {
+        font-size: 14px;
+        line-height: 1.5;
+        }
+        #accessibility-container * {
+        font-size: inherit;
+        line-height: inherit;
       }
     `;
   }
@@ -283,21 +344,26 @@
    * Apply text spacing styles
    */
   function applyTextSpacing() {
-    if (!domCache.app) return;
-    
-    if (state.textSpacing === 1) {
-      domCache.app.style.letterSpacing = '0.08em';
-      domCache.app.style.wordSpacing = '0.15em';
-      domCache.app.style.lineHeight = '1.6';
-    } else if (state.textSpacing === 2) {
-      domCache.app.style.letterSpacing = '0.12em';
-      domCache.app.style.wordSpacing = '0.25em';
-      domCache.app.style.lineHeight = '1.8';
-    } else {
-      domCache.app.style.letterSpacing = '';
-      domCache.app.style.wordSpacing = '';
-      domCache.app.style.lineHeight = '';
+    if (state.textSpacing === 0) {
+      removeStyleElement('text-spacing-style');
+      return;
     }
+
+    const letterSpacing = state.textSpacing === 1 ? '0.08em' : '0.12em';
+    const wordSpacing = state.textSpacing === 1 ? '0.15em' : '0.25em';
+    const lineHeight = state.textSpacing === 1 ? '1.6' : '1.8';
+    
+    const style = getOrCreateStyleElement('text-spacing-style');
+    style.textContent = `
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) *:not(#accessibility-container):not(#accessibility-container *):not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
+        letter-spacing: ${letterSpacing};
+        word-spacing: ${wordSpacing};
+        line-height: ${lineHeight};
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        word-break: break-word;
+      }
+    `;
   }
 
   /**
@@ -318,28 +384,33 @@
     
     const style = getOrCreateStyleElement('dyslexia-style');
     style.textContent = `
-      body, body * {
-        font-family: ${fontFamily} !important;
-        line-height: ${lineHeight} !important;
-        letter-spacing: ${letterSpacing} !important;
-        word-spacing: ${wordSpacing} !important;
-        text-align: left !important;
-        font-weight: ${fontWeight} !important;
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) *:not(#accessibility-container):not(#accessibility-container *):not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
+        font-family: ${fontFamily};
+        line-height: ${lineHeight};
+        letter-spacing: ${letterSpacing};
+        word-spacing: ${wordSpacing};
+        text-align: left;
+        font-weight: ${fontWeight};
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        word-break: break-word;
       }
       #accessibility-container, #accessibility-container * {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-        line-height: 1.5 !important;
-        letter-spacing: normal !important;
-        word-spacing: normal !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        line-height: 1.5;
+        letter-spacing: normal;
+        word-spacing: normal;
       }
-      body p, body div {
-        text-align: left !important;
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) p:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) div:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
+        text-align: left;
       }
-      body em, body i {
-        font-style: normal !important;
-        font-weight: bold !important;
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) em:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) i:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) {
+        font-style: normal;
+        font-weight: bold;
       }
-      ${isLevel2 ? 'body p { margin-bottom: 1em !important; }' : ''}
+      ${isLevel2 ? 'body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) p:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) { margin-bottom: 1em; }' : ''}
     `;
   }
 
@@ -354,25 +425,25 @@
 
     const style = getOrCreateStyleElement('hide-images-style');
     style.textContent = `
-      body img:not(#accessibility-container img):not(#accessibility-container *),
-      #app img,
-      img[src*=".png"],
-      img[src*=".jpg"],
-      img[src*=".jpeg"],
-      img[src*=".gif"],
-      img[src*=".svg"],
-      img[src*=".webp"],
-      [style*="background-image"] {
-        opacity: 0.1 !important;
-        filter: blur(5px) !important;
-        visibility: visible !important;
+      body img:not(#accessibility-container img):not(#accessibility-container *):not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
+      #app img:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
+      img[src*=".png"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
+      img[src*=".jpg"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
+      img[src*=".jpeg"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
+      img[src*=".gif"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
+      img[src*=".svg"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
+      img[src*=".webp"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
+      [style*="background-image"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
+        opacity: 0.1;
+        filter: blur(5px);
+        visibility: visible;
       }
       #accessibility-container,
       #accessibility-container img,
       #accessibility-container * {
-        opacity: 1 !important;
-        filter: none !important;
-        visibility: visible !important;
+        opacity: 1;
+        filter: none;
+        visibility: visible;
       }
     `;
   }
@@ -394,15 +465,19 @@
     
     const style = getOrCreateStyleElement('focus-indicator-style');
     style.textContent = `
-      *:focus {
-        outline: ${outlineWidth} solid #3b82f6 !important;
-        outline-offset: ${outlineOffset} !important;
-        ${isLevel2 ? `box-shadow: 0 0 0 ${boxShadowSize} rgba(59, 130, 246, 0.3) !important;` : ''}
+      *:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]):focus {
+        outline: ${outlineWidth} solid #3b82f6;
+        outline-offset: ${outlineOffset};
+        ${isLevel2 ? `box-shadow: 0 0 0 ${boxShadowSize} rgba(59, 130, 246, 0.3);` : ''}
       }
-      button:focus, a:focus, input:focus, select:focus, textarea:focus {
-        outline: ${outlineWidth} solid #3b82f6 !important;
-        outline-offset: ${outlineOffset} !important;
-        box-shadow: 0 0 0 ${boxShadowSize} rgba(59, 130, 246, ${boxShadowOpacity}) !important;
+      button:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):focus, 
+      a:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):focus, 
+      input:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):focus, 
+      select:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):focus, 
+      textarea:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):focus {
+        outline: ${outlineWidth} solid #3b82f6;
+        outline-offset: ${outlineOffset};
+        box-shadow: 0 0 0 ${boxShadowSize} rgba(59, 130, 246, ${boxShadowOpacity});
       }
     `;
   }
@@ -418,23 +493,29 @@
 
     const style = getOrCreateStyleElement('motor-impaired-style');
     style.textContent = `
-      button, a, input, select, textarea, [role="button"], [tabindex="0"] {
-        min-height: 44px !important;
-        min-width: 44px !important;
-        padding: 12px 20px !important;
+      button:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
+      a:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
+      input:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
+      select:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
+      textarea:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
+      [role="button"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
+      [tabindex="0"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 12px 20px;
       }
-      button, a, input[type="button"], input[type="submit"], [role="button"] {
-        margin: 4px !important;
+      button:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
+      a:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
+      input[type="button"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
+      input[type="submit"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
+      [role="button"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
+        margin: 4px;
       }
-      input, select, textarea {
-        padding: 12px 16px !important;
-        font-size: 16px !important;
-      }
-      body *:not(#accessibility-container):not(#accessibility-container *) {
-        cursor: default !important;
-      }
-      button, a, input, select, textarea, [role="button"] {
-        cursor: pointer !important;
+      input:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
+      select:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
+      textarea:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
+        padding: 12px 16px;
+        font-size: 16px;
       }
     `;
   }
@@ -450,25 +531,17 @@
 
     const style = getOrCreateStyleElement('color-blind-style');
     style.textContent = `
-      /* Add patterns and textures to color-coded elements */
-      [style*="color"], [class*="color"], [data-color] {
-        position: relative !important;
-      }
-      /* Enhance contrast for color-dependent information */
-      body, body *:not(#accessibility-container):not(#accessibility-container *) {
-        filter: contrast(1.2) !important;
-      }
       /* Add text labels to color-only indicators */
-      [style*="background-color"]:not([aria-label]):not([title]) {
-        border: 2px solid currentColor !important;
+      [style*="background-color"]:not([aria-label]):not([title]):not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
+        border: 2px solid currentColor;
       }
       /* Ensure links are distinguishable beyond color */
-      a:not(:visited) {
-        text-decoration: underline !important;
+      a:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]):not(:visited) {
+        text-decoration: underline;
       }
-      a:visited {
-        text-decoration: underline !important;
-        opacity: 0.8 !important;
+      a:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]):visited {
+        text-decoration: underline;
+        opacity: 0.8;
       }
     `;
   }
@@ -484,20 +557,21 @@
 
     const style = getOrCreateStyleElement('low-vision-style');
     style.textContent = `
-      body, body *:not(#accessibility-container):not(#accessibility-container *) {
-        font-size: 120% !important;
-        line-height: 1.8 !important;
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) *:not(#accessibility-container):not(#accessibility-container *):not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
+        font-size: 120%;
+        line-height: 1.8;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        word-break: break-word;
       }
-      body, #app {
-        filter: contrast(1.4) brightness(1.1) !important;
-      }
-      button, a, input, select, textarea {
-        font-size: 110% !important;
-        padding: 14px 20px !important;
-        border-width: 2px !important;
-      }
-      img, video, [style*="background-image"] {
-        opacity: 0.9 !important;
+      button:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
+      a:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
+      input:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
+      select:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
+      textarea:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
+        font-size: 110%;
+        padding: 14px 20px;
+        border-width: 2px;
       }
     `;
   }
@@ -513,30 +587,29 @@
 
     const style = getOrCreateStyleElement('cognitive-learning-style');
     style.textContent = `
-      body, body *:not(#accessibility-container):not(#accessibility-container *) {
-        font-family: Arial, Helvetica, sans-serif !important;
-        font-size: 110% !important;
-        line-height: 1.7 !important;
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) *:not(#accessibility-container):not(#accessibility-container *):not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 110%;
+        line-height: 1.7;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        word-break: break-word;
       }
-      body p, body li, body div {
-        margin-bottom: 1.2em !important;
-        max-width: 70ch !important;
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) p:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) li:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) div:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
+        margin-bottom: 1.2em;
+        max-width: 70ch;
       }
-      body h1, body h2, body h3, body h4, body h5, body h6 {
-        margin-top: 1.5em !important;
-        margin-bottom: 0.8em !important;
-        font-weight: bold !important;
-      }
-      /* Simplify animations */
-      *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-      }
-      /* Clear visual hierarchy */
-      body {
-        background: #ffffff !important;
-        color: #000000 !important;
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) h1:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) h2:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) h3:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) h4:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) h5:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) h6:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) {
+        margin-top: 1.5em;
+        margin-bottom: 0.8em;
+        font-weight: bold;
       }
     `;
   }
@@ -552,31 +625,22 @@
 
     const style = getOrCreateStyleElement('seizure-epileptic-style');
     style.textContent = `
-      /* Remove all animations and transitions */
-      *, *::before, *::after {
-        animation: none !important;
-        transition: none !important;
-        transform: none !important;
+      /* Remove all animations and transitions (excluding Rise elements) */
+      *:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
+      *:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"])::before, 
+      *:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"])::after {
+        animation: none;
+        transition: none;
       }
       /* Remove flashing content */
-      [style*="animation"], [class*="animate"], [class*="flash"] {
-        display: none !important;
+      [style*="animation"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
+      [class*="animate"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
+      [class*="flash"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
+        display: none;
       }
-      /* Reduce motion */
-      @media (prefers-reduced-motion: reduce) {
-        *, *::before, *::after {
-          animation-duration: 0.01ms !important;
-          animation-iteration-count: 1 !important;
-          transition-duration: 0.01ms !important;
-        }
-      }
-      /* Remove auto-playing videos */
-      video[autoplay] {
-        display: none !important;
-      }
-      /* Stabilize backgrounds */
-      [style*="background"] {
-        background-attachment: scroll !important;
+      /* Remove auto-playing videos (excluding Rise player) */
+      video[autoplay]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
+        display: none;
       }
     `;
   }
@@ -592,68 +656,72 @@
 
     const style = getOrCreateStyleElement('adhd-style');
     style.textContent = `
-      /* Reduce distractions */
-      body *:not(#accessibility-container):not(#accessibility-container *):not(script):not(style) {
-        animation: none !important;
+      /* Reduce distractions (excluding Rise elements) */
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) *:not(#accessibility-container):not(#accessibility-container *):not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]):not(script):not(style) {
+        animation: none;
       }
       /* Focus aids */
-      body p, body li, body div {
-        margin-bottom: 1.5em !important;
-        padding: 0.5em !important;
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) p:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) li:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) div:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
+        margin-bottom: 1.5em;
+        padding: 0.5em;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        word-break: break-word;
       }
       /* Clear visual boundaries */
-      body section, body article, body div[class*="block"] {
-        border-left: 3px solid transparent !important;
-        padding-left: 1em !important;
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) section:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) article:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) div[class*="block"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
+        border-left: 3px solid transparent;
+        padding-left: 1em;
       }
-      body section:hover, body article:hover, body div[class*="block"]:hover {
-        border-left-color: #3b82f6 !important;
-        background: rgba(59, 130, 246, 0.05) !important;
-      }
-      /* Simplify interface */
-      body {
-        background: #f9fafb !important;
-      }
-      /* Reduce visual noise */
-      [style*="background-image"]:not([role="img"]) {
-        opacity: 0.3 !important;
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) section:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):hover, 
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) article:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):hover, 
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) div[class*="block"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]):hover {
+        border-left-color: #3b82f6;
+        background: rgba(59, 130, 246, 0.05);
       }
       /* Clear focus indicators */
-      *:focus {
-        outline: 3px solid #3b82f6 !important;
-        outline-offset: 2px !important;
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3) !important;
+      *:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]):focus {
+        outline: 3px solid #3b82f6;
+        outline-offset: 2px;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3);
       }
     `;
   }
 
   /**
-   * Apply all accessibility settings
+   * Apply all accessibility settings (async to prevent blocking)
    */
   const applyAllSettings = debounce(function() {
     if (!domCache.app) {
       domCache.init();
     }
     
-    applyFilters();
-    applyLargeText();
-    applyTextSpacing();
-    applyDyslexiaStyles();
-    applyHideImages();
-    applyFocusIndicator();
-    applyMotorImpaired();
-    applyColorBlind();
-    applyLowVision();
-    applyCognitiveLearning();
-    applySeizureEpileptic();
-    applyADHD();
-    
-    // Text to Speech
-    if (state.textToSpeech === 1) {
-      enableTextToSpeech();
-    } else {
-      disableTextToSpeech();
-    }
+    // Use requestAnimationFrame to prevent blocking UI
+    requestAnimationFrame(() => {
+      applyFilters();
+      applyLargeText();
+      applyTextSpacing();
+      applyDyslexiaStyles();
+      applyHideImages();
+      applyFocusIndicator();
+      applyMotorImpaired();
+      applyColorBlind();
+      applyLowVision();
+      applyCognitiveLearning();
+      applySeizureEpileptic();
+      applyADHD();
+      
+      // Text to Speech
+      if (state.textToSpeech === 1) {
+        enableTextToSpeech();
+      } else {
+        disableTextToSpeech();
+      }
+    });
   }, DEBOUNCE_DELAY);
 
   // ============ TEXT TO SPEECH ============
@@ -741,21 +809,21 @@
               ttsIndicator.setAttribute('aria-live', 'polite');
               ttsIndicator.textContent = 'Speaking...';
               ttsIndicator.style.cssText = `
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                background: rgba(34, 197, 94, 0.95);
-                color: white;
-                padding: 10px 20px;
-                border-radius: 20px;
-                font-size: 13px;
-                font-weight: 500;
-                box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
-                z-index: 999999;
-                animation: pulse 1s infinite;
-                pointer-events: none;
-                user-select: none;
-              `;
+              position: fixed;
+              bottom: 20px;
+              right: 20px;
+              background: rgba(34, 197, 94, 0.95);
+              color: white;
+              padding: 10px 20px;
+              border-radius: 20px;
+              font-size: 13px;
+              font-weight: 500;
+              box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+              z-index: 999999;
+              animation: pulse 1s infinite;
+              pointer-events: none;
+              user-select: none;
+            `;
               document.body.appendChild(ttsIndicator);
             }
           };
@@ -852,7 +920,7 @@
     
     // Cancel speech
     if (speechSynthesis) {
-      speechSynthesis.cancel();
+    speechSynthesis.cancel();
     }
   }
 
@@ -910,16 +978,20 @@
   }
 
   /**
-   * Reset all settings
+   * Reset all settings (async to prevent blocking)
    */
   function resetAll() {
     Object.keys(state).forEach(key => {
       state[key] = 0;
     });
     saveSettings();
-    applyAllSettings();
-    updateUI();
-    announceToScreenReader('All accessibility settings have been reset');
+    requestAnimationFrame(() => {
+      applyAllSettings();
+      requestAnimationFrame(() => {
+        updateUI();
+        announceToScreenReader('All accessibility settings have been reset');
+      });
+    });
   }
 
   // ============ INITIALIZATION ============
@@ -979,23 +1051,34 @@
       }
     });
 
-    // Accessibility options
+    // Accessibility options - use async handlers to prevent blocking
     if (domCache.options && domCache.options.length > 0) {
       domCache.options.forEach(option => {
-        option.addEventListener('click', () => {
+        option.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
           const setting = option.dataset.setting;
           if (setting) {
-            toggleSetting(setting);
+            // Use requestAnimationFrame to prevent blocking
+            requestAnimationFrame(() => {
+              toggleSetting(setting);
+            });
           }
-        });
+        }, { passive: false });
         
         // Keyboard support
         option.addEventListener('keydown', (e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            option.click();
+            e.stopPropagation();
+            const setting = option.dataset.setting;
+            if (setting) {
+              requestAnimationFrame(() => {
+                toggleSetting(setting);
+              });
+            }
           }
-        });
+        }, { passive: false });
       });
     }
 
@@ -1198,7 +1281,7 @@
           parentContainer.insertBefore(infographicSection, keySection.nextSibling);
         } else {
           if (infographicSection.parentNode !== parentContainer) {
-            parentContainer.appendChild(infographicSection);
+          parentContainer.appendChild(infographicSection);
           }
         }
         
@@ -1274,7 +1357,7 @@
         }
         
         if (hasRelevantChanges) {
-          schedulePlacement();
+        schedulePlacement();
         }
       });
 
@@ -1316,7 +1399,7 @@
   }
 
   // ============ STARTUP ============
-  
+
   // Wait for DOM to be ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
