@@ -23,7 +23,13 @@
     focusIndicator: 0,
     hideImages: 0,
     textToSpeech: 0,
-    saturation: 0
+    saturation: 0,
+    motorImpaired: 0,
+    colorBlind: 0,
+    lowVision: 0,
+    cognitiveLearning: 0,
+    seizureEpileptic: 0,
+    adhd: 0
   };
 
   // Settings configuration for e-learning
@@ -35,7 +41,13 @@
     focusIndicator: { levels: 2, binary: false, label: 'Focus Indicator', description: 'Enhance keyboard focus indicators' },
     hideImages: { levels: 1, binary: true, label: 'Hide Images', description: 'Reduce image visibility to focus on text' },
     textToSpeech: { levels: 1, binary: true, label: 'Text to Speech', description: 'Read selected text aloud' },
-    saturation: { levels: 2, binary: false, label: 'Saturation', description: 'Adjust color saturation' }
+    saturation: { levels: 2, binary: false, label: 'Saturation', description: 'Adjust color saturation' },
+    motorImpaired: { levels: 1, binary: true, label: 'Motor Impaired', description: 'Larger click targets and keyboard enhancements' },
+    colorBlind: { levels: 1, binary: true, label: 'Color Blind', description: 'Color adjustments and pattern indicators' },
+    lowVision: { levels: 1, binary: true, label: 'Low Vision', description: 'Enhanced visual aids and magnification' },
+    cognitiveLearning: { levels: 1, binary: true, label: 'Cognitive & Learning', description: 'Simplified UI and reduced distractions' },
+    seizureEpileptic: { levels: 1, binary: true, label: 'Seizure & Epileptic', description: 'Reduce motion and remove flashing content' },
+    adhd: { levels: 1, binary: true, label: 'ADHD', description: 'Focus aids and reduced distractions' }
   };
 
   // ============ UTILITY FUNCTIONS ============
@@ -396,6 +408,226 @@
   }
 
   /**
+   * Apply Motor Impaired profile styles
+   */
+  function applyMotorImpaired() {
+    if (state.motorImpaired === 0) {
+      removeStyleElement('motor-impaired-style');
+      return;
+    }
+
+    const style = getOrCreateStyleElement('motor-impaired-style');
+    style.textContent = `
+      button, a, input, select, textarea, [role="button"], [tabindex="0"] {
+        min-height: 44px !important;
+        min-width: 44px !important;
+        padding: 12px 20px !important;
+      }
+      button, a, input[type="button"], input[type="submit"], [role="button"] {
+        margin: 4px !important;
+      }
+      input, select, textarea {
+        padding: 12px 16px !important;
+        font-size: 16px !important;
+      }
+      body *:not(#accessibility-container):not(#accessibility-container *) {
+        cursor: default !important;
+      }
+      button, a, input, select, textarea, [role="button"] {
+        cursor: pointer !important;
+      }
+    `;
+  }
+
+  /**
+   * Apply Color Blind profile styles
+   */
+  function applyColorBlind() {
+    if (state.colorBlind === 0) {
+      removeStyleElement('color-blind-style');
+      return;
+    }
+
+    const style = getOrCreateStyleElement('color-blind-style');
+    style.textContent = `
+      /* Add patterns and textures to color-coded elements */
+      [style*="color"], [class*="color"], [data-color] {
+        position: relative !important;
+      }
+      /* Enhance contrast for color-dependent information */
+      body, body *:not(#accessibility-container):not(#accessibility-container *) {
+        filter: contrast(1.2) !important;
+      }
+      /* Add text labels to color-only indicators */
+      [style*="background-color"]:not([aria-label]):not([title]) {
+        border: 2px solid currentColor !important;
+      }
+      /* Ensure links are distinguishable beyond color */
+      a:not(:visited) {
+        text-decoration: underline !important;
+      }
+      a:visited {
+        text-decoration: underline !important;
+        opacity: 0.8 !important;
+      }
+    `;
+  }
+
+  /**
+   * Apply Low Vision profile styles
+   */
+  function applyLowVision() {
+    if (state.lowVision === 0) {
+      removeStyleElement('low-vision-style');
+      return;
+    }
+
+    const style = getOrCreateStyleElement('low-vision-style');
+    style.textContent = `
+      body, body *:not(#accessibility-container):not(#accessibility-container *) {
+        font-size: 120% !important;
+        line-height: 1.8 !important;
+      }
+      body, #app {
+        filter: contrast(1.4) brightness(1.1) !important;
+      }
+      button, a, input, select, textarea {
+        font-size: 110% !important;
+        padding: 14px 20px !important;
+        border-width: 2px !important;
+      }
+      img, video, [style*="background-image"] {
+        opacity: 0.9 !important;
+      }
+    `;
+  }
+
+  /**
+   * Apply Cognitive & Learning profile styles
+   */
+  function applyCognitiveLearning() {
+    if (state.cognitiveLearning === 0) {
+      removeStyleElement('cognitive-learning-style');
+      return;
+    }
+
+    const style = getOrCreateStyleElement('cognitive-learning-style');
+    style.textContent = `
+      body, body *:not(#accessibility-container):not(#accessibility-container *) {
+        font-family: Arial, Helvetica, sans-serif !important;
+        font-size: 110% !important;
+        line-height: 1.7 !important;
+      }
+      body p, body li, body div {
+        margin-bottom: 1.2em !important;
+        max-width: 70ch !important;
+      }
+      body h1, body h2, body h3, body h4, body h5, body h6 {
+        margin-top: 1.5em !important;
+        margin-bottom: 0.8em !important;
+        font-weight: bold !important;
+      }
+      /* Simplify animations */
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+      /* Clear visual hierarchy */
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+    `;
+  }
+
+  /**
+   * Apply Seizure & Epileptic profile styles
+   */
+  function applySeizureEpileptic() {
+    if (state.seizureEpileptic === 0) {
+      removeStyleElement('seizure-epileptic-style');
+      return;
+    }
+
+    const style = getOrCreateStyleElement('seizure-epileptic-style');
+    style.textContent = `
+      /* Remove all animations and transitions */
+      *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+        transform: none !important;
+      }
+      /* Remove flashing content */
+      [style*="animation"], [class*="animate"], [class*="flash"] {
+        display: none !important;
+      }
+      /* Reduce motion */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+      /* Remove auto-playing videos */
+      video[autoplay] {
+        display: none !important;
+      }
+      /* Stabilize backgrounds */
+      [style*="background"] {
+        background-attachment: scroll !important;
+      }
+    `;
+  }
+
+  /**
+   * Apply ADHD profile styles
+   */
+  function applyADHD() {
+    if (state.adhd === 0) {
+      removeStyleElement('adhd-style');
+      return;
+    }
+
+    const style = getOrCreateStyleElement('adhd-style');
+    style.textContent = `
+      /* Reduce distractions */
+      body *:not(#accessibility-container):not(#accessibility-container *):not(script):not(style) {
+        animation: none !important;
+      }
+      /* Focus aids */
+      body p, body li, body div {
+        margin-bottom: 1.5em !important;
+        padding: 0.5em !important;
+      }
+      /* Clear visual boundaries */
+      body section, body article, body div[class*="block"] {
+        border-left: 3px solid transparent !important;
+        padding-left: 1em !important;
+      }
+      body section:hover, body article:hover, body div[class*="block"]:hover {
+        border-left-color: #3b82f6 !important;
+        background: rgba(59, 130, 246, 0.05) !important;
+      }
+      /* Simplify interface */
+      body {
+        background: #f9fafb !important;
+      }
+      /* Reduce visual noise */
+      [style*="background-image"]:not([role="img"]) {
+        opacity: 0.3 !important;
+      }
+      /* Clear focus indicators */
+      *:focus {
+        outline: 3px solid #3b82f6 !important;
+        outline-offset: 2px !important;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3) !important;
+      }
+    `;
+  }
+
+  /**
    * Apply all accessibility settings
    */
   const applyAllSettings = debounce(function() {
@@ -409,6 +641,12 @@
     applyDyslexiaStyles();
     applyHideImages();
     applyFocusIndicator();
+    applyMotorImpaired();
+    applyColorBlind();
+    applyLowVision();
+    applyCognitiveLearning();
+    applySeizureEpileptic();
+    applyADHD();
     
     // Text to Speech
     if (state.textToSpeech === 1) {
