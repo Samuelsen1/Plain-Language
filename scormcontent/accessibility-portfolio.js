@@ -19,7 +19,9 @@
     contrast: 0,
     largeText: 0,
     textSpacing: 0,
+    dyslexia: 0,
     focusIndicator: 0,
+    hideImages: 0,
     textToSpeech: 0,
     blueLightFilter: 0
   };
@@ -29,7 +31,9 @@
     contrast: { levels: 2, binary: false, label: 'Contrast', description: 'Increase contrast for better visibility' },
     largeText: { levels: 2, binary: false, label: 'Large Text', description: 'Increase text size for better readability' },
     textSpacing: { levels: 2, binary: false, label: 'Text Spacing', description: 'Increase spacing between letters and words' },
+    dyslexia: { levels: 2, binary: false, label: 'Dyslexia Friendly', description: 'Use dyslexia-friendly fonts and spacing' },
     focusIndicator: { levels: 2, binary: false, label: 'Focus Indicator', description: 'Enhance keyboard focus indicators' },
+    hideImages: { levels: 1, binary: true, label: 'Hide Images', description: 'Reduce image visibility to focus on text' },
     textToSpeech: { levels: 1, binary: true, label: 'Text to Speech', description: 'Read selected text aloud' },
     blueLightFilter: { levels: 2, binary: false, label: 'Blue Light Filter', description: 'Reduce blue light for eye comfort' }
   };
@@ -386,6 +390,88 @@
   }
 
   /**
+   * Apply dyslexia-friendly styles
+   */
+  function applyDyslexiaStyles() {
+    if (state.dyslexia === 0) {
+      removeStyleElement('dyslexia-style');
+      return;
+    }
+
+    const isLevel2 = state.dyslexia === 2;
+    const fontFamily = isLevel2 ? 'Verdana, Arial, Helvetica, sans-serif' : 'Arial, Verdana, Helvetica, sans-serif';
+    const lineHeight = isLevel2 ? '1.8' : '1.6';
+    const letterSpacing = isLevel2 ? '0.12em' : '0.08em';
+    const wordSpacing = isLevel2 ? '0.32em' : '0.2em';
+    const fontWeight = isLevel2 ? '500' : '400';
+    
+    const style = getOrCreateStyleElement('dyslexia-style');
+    style.textContent = `
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) *:not(#accessibility-container):not(#accessibility-container *):not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
+        font-family: ${fontFamily};
+        line-height: ${lineHeight};
+        letter-spacing: ${letterSpacing};
+        word-spacing: ${wordSpacing};
+        text-align: left;
+        font-weight: ${fontWeight};
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        word-break: break-word;
+      }
+      #accessibility-container, #accessibility-container * {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        line-height: 1.5;
+        letter-spacing: normal;
+        word-spacing: normal;
+      }
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) p:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) div:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
+        text-align: left;
+      }
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) em:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) i:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) {
+        font-style: normal;
+        font-weight: bold;
+      }
+      ${isLevel2 ? 'body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) p:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) { margin-bottom: 1em; }' : ''}
+    `;
+  }
+
+  /**
+   * Apply hide images styles
+   */
+  function applyHideImages() {
+    if (state.hideImages === 0) {
+      removeStyleElement('hide-images-style');
+      return;
+    }
+
+    const style = getOrCreateStyleElement('hide-images-style');
+    style.textContent = `
+      body img:not(#accessibility-container img):not(#accessibility-container *):not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
+      #app img:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
+      img[src*=".png"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
+      img[src*=".jpg"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
+      img[src*=".jpeg"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
+      img[src*=".gif"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
+      img[src*=".svg"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
+      img[src*=".webp"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
+      [style*="background-image"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
+        opacity: 0.1;
+        filter: blur(5px);
+        visibility: visible;
+      }
+      #accessibility-container,
+      #accessibility-container img,
+      #accessibility-container * {
+        opacity: 1;
+        filter: none;
+        visibility: visible;
+      }
+    `;
+  }
+
+  /**
    * Apply focus indicator styles
    */
   function applyFocusIndicator() {
@@ -432,6 +518,8 @@
       applyFilters();
       applyLargeText();
       applyTextSpacing();
+      applyDyslexiaStyles();
+      applyHideImages();
       applyFocusIndicator();
       applyBlueLightFilter();
       

@@ -701,7 +701,7 @@ root.Runtime = {
     <!-- Accessibility Floating Button & Panel -->
     <div class="fixed bottom-6 left-6 z-50" id="accessibility-container" role="complementary" aria-label="Accessibility controls">
       <!-- Accessibility Panel (Hidden by default) -->
-      <div id="accessibility-panel" class="absolute bottom-20 left-0 w-80 rounded-3xl shadow-2xl backdrop-blur-xl hidden" style="background: rgba(255, 255, 255, 0.95); border: 2px solid rgba(216, 180, 254, 0.3); max-height: 500px;" role="dialog" aria-modal="true" aria-labelledby="accessibility-panel-title">
+      <div id="accessibility-panel" class="absolute bottom-20 left-0 w-80 rounded-3xl shadow-2xl backdrop-blur-xl hidden" style="background: rgba(255, 255, 255, 0.95); border: 2px solid rgba(216, 180, 254, 0.3); max-height: 580px;" role="dialog" aria-modal="true" aria-labelledby="accessibility-panel-title">
         
         <!-- Header -->
         <div class="flex justify-between items-center px-4 py-3 border-b border-purple-300" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 22px 22px 0 0;">
@@ -712,7 +712,7 @@ root.Runtime = {
         </div>
 
         <!-- Accessibility Options Grid -->
-        <div class="grid grid-cols-2 gap-3 p-4 overflow-y-auto overscroll-contain" style="max-height: 400px;">
+        <div class="grid grid-cols-2 gap-3 p-4 overflow-y-auto overscroll-contain" style="max-height: 480px;">
           
           <!-- Contrast -->
           <button class="accessibility-option flex flex-col items-center p-3 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 transition-all cursor-pointer min-h-52px" data-setting="contrast" type="button" aria-pressed="false" role="switch" tabindex="0">
@@ -763,9 +763,46 @@ root.Runtime = {
             </div>
           </button>
 
+          <!-- Dyslexia Friendly -->
+          <button class="accessibility-option flex flex-col items-center p-3 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 transition-all cursor-pointer min-h-52px" data-setting="dyslexia" type="button" aria-pressed="false" role="switch" tabindex="0">
+            <img src="images/dyslexia.png" alt="" class="w-8 h-8 mb-2" style="filter: brightness(0.5);" aria-hidden="true">
+            <span class="text-xs text-center font-medium text-gray-700">Dyslexia Friendly</span>
+            <div class="flex gap-2 mt-2 w-full justify-center" aria-hidden="true">
+              <span class="level-indicator h-1 w-11 rounded-sm bg-gray-300"></span>
+              <span class="level-indicator h-1 w-11 rounded-sm bg-gray-300"></span>
+            </div>
+          </button>
+
+          <!-- Hide Images -->
+          <button class="accessibility-option flex flex-col items-center p-3 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 transition-all cursor-pointer min-h-52px" data-setting="hideImages" type="button" aria-pressed="false" role="switch" tabindex="0">
+            <img src="images/hide-images.png" alt="" class="w-8 h-8 mb-2" style="filter: brightness(0.5);" aria-hidden="true">
+            <span class="text-xs text-center font-medium text-gray-700">Hide Images</span>
+            <div class="flex gap-2 mt-2 w-full justify-center" aria-hidden="true">
+              <span class="level-indicator h-1 w-11 rounded-sm bg-gray-300"></span>
+            </div>
+          </button>
+
           <!-- Blue Light Filter -->
           <button class="accessibility-option flex flex-col items-center p-3 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-purple-400/40 hover:bg-purple-600/30 transition-all cursor-pointer min-h-52px" data-setting="blueLightFilter" type="button" aria-pressed="false" role="switch" tabindex="0">
-            <img src="images/saturation.png" alt="" class="w-8 h-8 mb-2" style="filter: brightness(0.5);" aria-hidden="true">
+            <svg class="w-8 h-8 mb-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <circle cx="12" cy="12" r="6" fill="url(#sunGradient)"/>
+              <rect x="11" y="2" width="2" height="3" rx="1" fill="#FFA500"/>
+              <rect x="11" y="19" width="2" height="3" rx="1" fill="#FFE4B5"/>
+              <rect x="2" y="11" width="3" height="2" rx="1" fill="#FFA500"/>
+              <rect x="19" y="11" width="3" height="2" rx="1" fill="#FFE4B5"/>
+              <rect x="4.22" y="4.22" width="2" height="3" rx="1" transform="rotate(-45 4.22 4.22)" fill="#FFA500"/>
+              <rect x="17.78" y="17.78" width="2" height="3" rx="1" transform="rotate(-45 17.78 17.78)" fill="#FFE4B5"/>
+              <rect x="4.22" y="17.78" width="2" height="3" rx="1" transform="rotate(45 4.22 17.78)" fill="#FFA500"/>
+              <rect x="17.78" y="4.22" width="2" height="3" rx="1" transform="rotate(45 17.78 4.22)" fill="#FFE4B5"/>
+              <defs>
+                <linearGradient id="sunGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" style="stop-color:#FFA500;stop-opacity:1" />
+                  <stop offset="50%" style="stop-color:#FFA500;stop-opacity:1" />
+                  <stop offset="50%" style="stop-color:#FFE4B5;stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#FFE4B5;stop-opacity:1" />
+                </linearGradient>
+              </defs>
+            </svg>
             <span class="text-xs text-center font-medium text-gray-700">Blue Light Filter</span>
             <div class="flex gap-2 mt-2 w-full justify-center" aria-hidden="true">
               <span class="level-indicator h-1 w-11 rounded-sm bg-gray-300"></span>
