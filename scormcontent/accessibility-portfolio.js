@@ -19,17 +19,9 @@
     contrast: 0,
     largeText: 0,
     textSpacing: 0,
-    dyslexia: 0,
     focusIndicator: 0,
-    hideImages: 0,
     textToSpeech: 0,
-    saturation: 0,
-    motorImpaired: 0,
-    colorBlind: 0,
-    lowVision: 0,
-    cognitiveLearning: 0,
-    seizureEpileptic: 0,
-    adhd: 0
+    blueLightFilter: 0
   };
 
   // Settings configuration for e-learning
@@ -37,17 +29,9 @@
     contrast: { levels: 2, binary: false, label: 'Contrast', description: 'Increase contrast for better visibility' },
     largeText: { levels: 2, binary: false, label: 'Large Text', description: 'Increase text size for better readability' },
     textSpacing: { levels: 2, binary: false, label: 'Text Spacing', description: 'Increase spacing between letters and words' },
-    dyslexia: { levels: 2, binary: false, label: 'Dyslexia Friendly', description: 'Use dyslexia-friendly fonts and spacing' },
     focusIndicator: { levels: 2, binary: false, label: 'Focus Indicator', description: 'Enhance keyboard focus indicators' },
-    hideImages: { levels: 1, binary: true, label: 'Hide Images', description: 'Reduce image visibility to focus on text' },
     textToSpeech: { levels: 1, binary: true, label: 'Text to Speech', description: 'Read selected text aloud' },
-    saturation: { levels: 2, binary: false, label: 'Saturation', description: 'Adjust color saturation' },
-    motorImpaired: { levels: 1, binary: true, label: 'Motor Impaired', description: 'Larger click targets and keyboard enhancements' },
-    colorBlind: { levels: 1, binary: true, label: 'Color Blind', description: 'Color adjustments and pattern indicators' },
-    lowVision: { levels: 1, binary: true, label: 'Low Vision', description: 'Enhanced visual aids and magnification' },
-    cognitiveLearning: { levels: 1, binary: true, label: 'Cognitive & Learning', description: 'Simplified UI and reduced distractions' },
-    seizureEpileptic: { levels: 1, binary: true, label: 'Seizure & Epileptic', description: 'Reduce motion and remove flashing content' },
-    adhd: { levels: 1, binary: true, label: 'ADHD', description: 'Focus aids and reduced distractions' }
+    blueLightFilter: { levels: 2, binary: false, label: 'Blue Light Filter', description: 'Reduce blue light for eye comfort' }
   };
 
   // ============ UTILITY FUNCTIONS ============
@@ -260,7 +244,7 @@
   // ============ STYLE APPLICATION ============
   
   /**
-   * Apply filter styles (contrast, saturation)
+   * Apply filter styles (contrast)
    */
   function applyFilters() {
     const filters = [];
@@ -271,15 +255,50 @@
       filters.push('contrast(1.6)', 'brightness(1.15)');
     }
 
-    if (state.saturation === 1) {
-      filters.push('saturate(1.5)');
-    } else if (state.saturation === 2) {
-      filters.push('saturate(2)');
-    }
-
     if (domCache.app) {
       domCache.app.style.filter = filters.length > 0 ? filters.join(' ') : '';
     }
+  }
+
+  /**
+   * Apply blue light filter
+   */
+  function applyBlueLightFilter() {
+    if (state.blueLightFilter === 0) {
+      removeStyleElement('blue-light-filter-style');
+      return;
+    }
+
+    // Blue light filter: level 1 = warm (reduces blue), level 2 = very warm (stronger reduction)
+    // Using a warm overlay approach similar to night mode
+    const opacity = state.blueLightFilter === 1 ? 0.15 : 0.25;
+    const hueRotate = state.blueLightFilter === 1 ? '-10deg' : '-20deg';
+    
+    const style = getOrCreateStyleElement('blue-light-filter-style');
+    style.textContent = `
+      html:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"])::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 200, 100, ${opacity});
+        pointer-events: none;
+        z-index: 999998;
+        mix-blend-mode: multiply;
+      }
+      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
+      #app:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) {
+        filter: hue-rotate(${hueRotate}) brightness(0.98);
+      }
+      #accessibility-container, #accessibility-container * {
+        filter: none;
+      }
+      #accessibility-container::before {
+        display: none;
+      }
+    `;
   }
 
   /**
@@ -367,88 +386,6 @@
   }
 
   /**
-   * Apply dyslexia-friendly styles
-   */
-  function applyDyslexiaStyles() {
-    if (state.dyslexia === 0) {
-      removeStyleElement('dyslexia-style');
-      return;
-    }
-
-    const isLevel2 = state.dyslexia === 2;
-    const fontFamily = isLevel2 ? 'Verdana, Arial, Helvetica, sans-serif' : 'Arial, Verdana, Helvetica, sans-serif';
-    const lineHeight = isLevel2 ? '1.8' : '1.6';
-    const letterSpacing = isLevel2 ? '0.12em' : '0.08em';
-    const wordSpacing = isLevel2 ? '0.32em' : '0.2em';
-    const fontWeight = isLevel2 ? '500' : '400';
-    
-    const style = getOrCreateStyleElement('dyslexia-style');
-    style.textContent = `
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) *:not(#accessibility-container):not(#accessibility-container *):not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
-        font-family: ${fontFamily};
-        line-height: ${lineHeight};
-        letter-spacing: ${letterSpacing};
-        word-spacing: ${wordSpacing};
-        text-align: left;
-        font-weight: ${fontWeight};
-        overflow-wrap: break-word;
-        word-wrap: break-word;
-        word-break: break-word;
-      }
-      #accessibility-container, #accessibility-container * {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        line-height: 1.5;
-        letter-spacing: normal;
-        word-spacing: normal;
-      }
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) p:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) div:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
-        text-align: left;
-      }
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) em:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) i:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) {
-        font-style: normal;
-        font-weight: bold;
-      }
-      ${isLevel2 ? 'body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) p:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) { margin-bottom: 1em; }' : ''}
-    `;
-  }
-
-  /**
-   * Apply hide images styles
-   */
-  function applyHideImages() {
-    if (state.hideImages === 0) {
-      removeStyleElement('hide-images-style');
-      return;
-    }
-
-    const style = getOrCreateStyleElement('hide-images-style');
-    style.textContent = `
-      body img:not(#accessibility-container img):not(#accessibility-container *):not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
-      #app img:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
-      img[src*=".png"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
-      img[src*=".jpg"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
-      img[src*=".jpeg"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
-      img[src*=".gif"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
-      img[src*=".svg"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
-      img[src*=".webp"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]),
-      [style*="background-image"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
-        opacity: 0.1;
-        filter: blur(5px);
-        visibility: visible;
-      }
-      #accessibility-container,
-      #accessibility-container img,
-      #accessibility-container * {
-        opacity: 1;
-        filter: none;
-        visibility: visible;
-      }
-    `;
-  }
-
-  /**
    * Apply focus indicator styles
    */
   function applyFocusIndicator() {
@@ -483,216 +420,6 @@
   }
 
   /**
-   * Apply Motor Impaired profile styles
-   */
-  function applyMotorImpaired() {
-    if (state.motorImpaired === 0) {
-      removeStyleElement('motor-impaired-style');
-      return;
-    }
-
-    const style = getOrCreateStyleElement('motor-impaired-style');
-    style.textContent = `
-      button:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
-      a:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
-      input:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
-      select:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
-      textarea:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
-      [role="button"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
-      [tabindex="0"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
-        min-height: 44px;
-        min-width: 44px;
-        padding: 12px 20px;
-      }
-      button:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
-      a:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
-      input[type="button"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
-      input[type="submit"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
-      [role="button"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
-        margin: 4px;
-      }
-      input:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
-      select:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
-      textarea:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
-        padding: 12px 16px;
-        font-size: 16px;
-      }
-    `;
-  }
-
-  /**
-   * Apply Color Blind profile styles
-   */
-  function applyColorBlind() {
-    if (state.colorBlind === 0) {
-      removeStyleElement('color-blind-style');
-      return;
-    }
-
-    const style = getOrCreateStyleElement('color-blind-style');
-    style.textContent = `
-      /* Add text labels to color-only indicators */
-      [style*="background-color"]:not([aria-label]):not([title]):not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
-        border: 2px solid currentColor;
-      }
-      /* Ensure links are distinguishable beyond color */
-      a:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]):not(:visited) {
-        text-decoration: underline;
-      }
-      a:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]):visited {
-        text-decoration: underline;
-        opacity: 0.8;
-      }
-    `;
-  }
-
-  /**
-   * Apply Low Vision profile styles
-   */
-  function applyLowVision() {
-    if (state.lowVision === 0) {
-      removeStyleElement('low-vision-style');
-      return;
-    }
-
-    const style = getOrCreateStyleElement('low-vision-style');
-    style.textContent = `
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) *:not(#accessibility-container):not(#accessibility-container *):not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
-        font-size: 120%;
-        line-height: 1.8;
-        overflow-wrap: break-word;
-        word-wrap: break-word;
-        word-break: break-word;
-      }
-      button:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
-      a:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
-      input:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
-      select:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
-      textarea:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
-        font-size: 110%;
-        padding: 14px 20px;
-        border-width: 2px;
-      }
-    `;
-  }
-
-  /**
-   * Apply Cognitive & Learning profile styles
-   */
-  function applyCognitiveLearning() {
-    if (state.cognitiveLearning === 0) {
-      removeStyleElement('cognitive-learning-style');
-      return;
-    }
-
-    const style = getOrCreateStyleElement('cognitive-learning-style');
-    style.textContent = `
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) *:not(#accessibility-container):not(#accessibility-container *):not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
-        font-family: Arial, Helvetica, sans-serif;
-        font-size: 110%;
-        line-height: 1.7;
-        overflow-wrap: break-word;
-        word-wrap: break-word;
-        word-break: break-word;
-      }
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) p:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) li:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) div:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
-        margin-bottom: 1.2em;
-        max-width: 70ch;
-      }
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) h1:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) h2:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) h3:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) h4:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) h5:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) h6:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) {
-        margin-top: 1.5em;
-        margin-bottom: 0.8em;
-        font-weight: bold;
-      }
-    `;
-  }
-
-  /**
-   * Apply Seizure & Epileptic profile styles
-   */
-  function applySeizureEpileptic() {
-    if (state.seizureEpileptic === 0) {
-      removeStyleElement('seizure-epileptic-style');
-      return;
-    }
-
-    const style = getOrCreateStyleElement('seizure-epileptic-style');
-    style.textContent = `
-      /* Remove all animations and transitions (excluding Rise elements) */
-      *:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
-      *:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"])::before, 
-      *:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"])::after {
-        animation: none;
-        transition: none;
-      }
-      /* Remove flashing content */
-      [style*="animation"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
-      [class*="animate"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]), 
-      [class*="flash"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
-        display: none;
-      }
-      /* Remove auto-playing videos (excluding Rise player) */
-      video[autoplay]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
-        display: none;
-      }
-    `;
-  }
-
-  /**
-   * Apply ADHD profile styles
-   */
-  function applyADHD() {
-    if (state.adhd === 0) {
-      removeStyleElement('adhd-style');
-      return;
-    }
-
-    const style = getOrCreateStyleElement('adhd-style');
-    style.textContent = `
-      /* Reduce distractions (excluding Rise elements) */
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) *:not(#accessibility-container):not(#accessibility-container *):not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]):not(script):not(style) {
-        animation: none;
-      }
-      /* Focus aids */
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) p:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) li:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) div:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
-        margin-bottom: 1.5em;
-        padding: 0.5em;
-        overflow-wrap: break-word;
-        word-wrap: break-word;
-        word-break: break-word;
-      }
-      /* Clear visual boundaries */
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) section:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) article:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]), 
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) div[class*="block"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]) {
-        border-left: 3px solid transparent;
-        padding-left: 1em;
-      }
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) section:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):hover, 
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) article:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):hover, 
-      body:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]) div[class*="block"]:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]):hover {
-        border-left-color: #3b82f6;
-        background: rgba(59, 130, 246, 0.05);
-      }
-      /* Clear focus indicators */
-      *:not([class*="rise"]):not([id*="rise"]):not([class*="Rise"]):not([id*="Rise"]):not([class*="articulate"]):not([id*="articulate"]):focus {
-        outline: 3px solid #3b82f6;
-        outline-offset: 2px;
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3);
-      }
-    `;
-  }
-
-  /**
    * Apply all accessibility settings (async to prevent blocking)
    */
   const applyAllSettings = debounce(function() {
@@ -705,15 +432,8 @@
       applyFilters();
       applyLargeText();
       applyTextSpacing();
-      applyDyslexiaStyles();
-      applyHideImages();
       applyFocusIndicator();
-      applyMotorImpaired();
-      applyColorBlind();
-      applyLowVision();
-      applyCognitiveLearning();
-      applySeizureEpileptic();
-      applyADHD();
+      applyBlueLightFilter();
       
       // Text to Speech
       if (state.textToSpeech === 1) {
