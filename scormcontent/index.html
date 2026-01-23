@@ -338,6 +338,22 @@ function completeOut(passed, reportParam) {
         LMSProxy.SetReachedEnd();
         break;
     }
+    
+    // Automatically redirect to completion page after course is completed
+    // Give a short delay to allow completion status to be saved
+    setTimeout(function() {
+      try {
+        // Try SCORM exit first, but if that fails (local development), redirect to completion page
+        LMSProxy.ConcedeControl();
+        // If ConcedeControl doesn't redirect/close, manually navigate to completion page
+        setTimeout(function() {
+          window.location.href = 'goodbye.html';
+        }, 500);
+      } catch(e) {
+        // Fallback: redirect to completion page
+        window.location.href = 'goodbye.html';
+      }
+    }, 1000);
   } else {
     switch(reportType) {
       case 'passed-failed':
