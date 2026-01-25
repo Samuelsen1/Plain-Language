@@ -1206,6 +1206,50 @@
     });
   }
 
+  /**
+   * Set a specific level for a setting (for Navitoir natural-language control).
+   * value: number 0..maxLevel, or for binary 0|1.
+   */
+  function setSetting(key, value) {
+    if (!key || !(key in state)) return;
+    var config = settingsConfig[key];
+    if (!config) return;
+    var v = typeof value === 'number' ? value : (value ? 1 : 0);
+    if (config.binary) {
+      state[key] = v ? 1 : 0;
+    } else {
+      var maxL = (config.levels || 2);
+      state[key] = Math.max(0, Math.min(maxL, Math.round(v)));
+    }
+    saveSettings();
+    requestAnimationFrame(function() {
+      applyAllSettings();
+      requestAnimationFrame(function() {
+        updateUI();
+        var cfg = settingsConfig[key];
+        if (cfg) announceToScreenReader(cfg.label + ' ' + (state[key] === 0 ? 'off' : 'level ' + state[key]));
+      });
+    });
+  }
+
+  // ============ PUBLIC API (for Navitoir / AI tools) ============
+  window.A11yPortfolio = {
+    toggle: function(key) { if (key && key in state) toggleSetting(key); },
+    set: function(key, value) { setSetting(key, value); },
+    getState: function() { return Object.assign({}, state); },
+    getConfig: function() { return settingsConfig; },
+    openPanel: function() {
+      domCache.init();
+      if (domCache.panel) { domCache.panel.classList.remove('hidden'); domCache.toggleBtn && domCache.toggleBtn.setAttribute('aria-expanded', 'true'); }
+    },
+    closePanel: function() {
+      if (domCache.panel) { domCache.panel.classList.add('hidden'); domCache.toggleBtn && domCache.toggleBtn.setAttribute('aria-expanded', 'false'); }
+    },
+    reset: resetAll,
+    applyAllSettings: applyAllSettings,
+    updateUI: updateUI
+  };
+
   // ============ STARTUP ============
 
   // Wait for DOM to be ready
