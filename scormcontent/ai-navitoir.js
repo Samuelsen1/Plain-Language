@@ -124,11 +124,70 @@
     return false;
   }
 
+  function handleNavitoirSubmit(raw) {
+    var q = (raw || '').toLowerCase().trim();
+    if (!q) return { message: 'Type a request or use a chip.', closePanel: false };
+    var any = function(terms) { return terms.some(function(t) { return t && q.includes(t); }); };
+
+    if (any(['accessibility', 'a11y', 'open accessibility', 'open a11y'])) {
+      if (window.A11yPortfolio && window.A11yPortfolio.openPanel) window.A11yPortfolio.openPanel();
+      return { message: '✅ Opening accessibility panel…', closePanel: true };
+    }
+
+    var a11yMap = [
+      { terms: ['contrast'], key: 'contrast', name: 'Contrast' },
+      { terms: ['text size', 'large text', 'font size', 'bigger text'], key: 'largeText', name: 'Large Text' },
+      { terms: ['text spacing', 'spacing', 'letter spacing'], key: 'textSpacing', name: 'Text Spacing' },
+      { terms: ['dyslexia', 'dyslexia font'], key: 'dyslexia', name: 'Dyslexia Friendly' },
+      { terms: ['focus', 'focus indicator', 'focus ring'], key: 'focusIndicator', name: 'Focus Indicator' },
+      { terms: ['hide images', 'images'], key: 'hideImages', name: 'Hide Images' },
+      { terms: ['text to speech', 'tts', 'read aloud'], key: 'textToSpeech', name: 'Text to Speech' },
+      { terms: ['blue light', 'blue light filter', 'bluelight'], key: 'blueLightFilter', name: 'Blue Light Filter' }
+    ];
+    var a11y = window.A11yPortfolio;
+    var cfg = (a11y && a11y.getConfig && a11y.getConfig()) || {};
+    var st = (a11y && a11y.getState && a11y.getState()) || {};
+    for (var i = 0; i < a11yMap.length; i++) {
+      var m = a11yMap[i];
+      if (!m.terms.some(function(t) { return q.includes(t); })) continue;
+      var key = m.key;
+      if (!cfg[key] || !(key in st)) continue;
+      var cur = st[key] || 0;
+      var binary = cfg[key].binary;
+      var maxL = (cfg[key].levels || 2);
+      var levelMatch = q.match(/(?:level|stufe|auf|lvl|to)\s*(\d+)/i);
+      var wantUp = any(['increase', 'max', 'up', 'more', 'on', 'turn on', 'enable']);
+      var wantDown = any(['decrease', 'reduce', 'lower', 'less', 'off', 'turn off', 'disable']);
+      var v = cur;
+      if (levelMatch) { v = Math.max(0, Math.min(binary ? 1 : maxL, parseInt(levelMatch[1], 10))); if (binary) v = v ? 1 : 0; }
+      else if (wantDown) v = binary ? 0 : Math.max(0, cur - 1);
+      else if (wantUp || cur === 0) v = binary ? 1 : Math.min(maxL, cur + 1);
+      if (v !== cur && a11y && a11y.set) { a11y.set(key, v); return { message: '✅ ' + m.name + ' ' + (v === 0 ? 'off' : 'on'), closePanel: false }; }
+      return { message: 'ℹ️ ' + m.name + ' is already ' + (cur === 0 ? 'off' : 'on') + '.', closePanel: false };
+    }
+
+    for (var li = 0; li < courseToc.length; li++) {
+      var les = courseToc[li];
+      var lt = (les.lessonTitle || '').toLowerCase();
+      if (lt && q.includes(lt)) { tryNavigate(les.lessonId, null); return { message: '✅ Navigating to ' + les.lessonTitle + '…', closePanel: true }; }
+      var bls = les.blocks || [];
+      for (var bi = 0; bi < bls.length; bi++) {
+        var b = bls[bi];
+        var bt = (b.title || '').toLowerCase();
+        if (bt && q.includes(bt)) { tryNavigate(les.lessonId, b.blockId); return { message: '✅ Navigating to ' + (b.title || 'section') + '…', closePanel: true }; }
+      }
+    }
+    var first = courseToc[0];
+    return { message: 'I can navigate to a lesson or control accessibility. Try: "Go to ' + (first ? first.lessonTitle : 'Introduction') + '", "Open accessibility", "Increase text size".', closePanel: false };
+  }
+
   // --- DOM: buttons and panels ---
   var aiOpen = false, navOpen = false;
-  var aiBtn, aiPanel, navBtn, navPanel;
+  var aiBtn, aiPanel, aiModalRoot, navBtn, navPanel, navModalRoot;
   var aiMessages, aiInput, aiSend;
-  var navTocEl, navA11yEl;
+  var navMsgEl, navChipsEl, navInputEl, navOnNavitoirSend;
+  var Z_MODAL = 999999;
+  var Z_FAB = 999998;
 
   function createIcon(name) {
     var svg = '';
@@ -151,7 +210,7 @@
     btn.setAttribute('aria-label', 'AI Assistant');
     btn.setAttribute('aria-expanded', 'false');
     btn.className = 'ai-nav-fab';
-    btn.style.cssText = 'position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#10b981 0%,#059669 100%);box-shadow:0 10px 40px rgba(16,185,129,0.4);color:#fff;transition:transform .2s,box-shadow .2s;z-index:50;';
+    btn.style.cssText = 'position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#10b981 0%,#059669 100%);box-shadow:0 10px 40px rgba(16,185,129,0.4);color:#fff;transition:transform .2s,box-shadow .2s;z-index:' + Z_FAB + ';';
     var img = document.createElement('img');
     img.src = 'images/ai.png';
     img.alt = '';
@@ -169,7 +228,7 @@
     btn.setAttribute('aria-label', 'Navitoir - Navigation Assistant');
     btn.setAttribute('aria-expanded', 'false');
     btn.className = 'ai-nav-fab';
-    btn.style.cssText = 'position:fixed;bottom:92px;right:24px;width:56px;height:56px;border-radius:50%;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#6366f1 0%,#4f46e5 100%);box-shadow:0 10px 40px rgba(99,102,241,0.4);color:#fff;transition:transform .2s,box-shadow .2s;z-index:50;';
+    btn.style.cssText = 'position:fixed;bottom:92px;right:24px;width:56px;height:56px;border-radius:50%;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#6366f1 0%,#4f46e5 100%);box-shadow:0 10px 40px rgba(99,102,241,0.4);color:#fff;transition:transform .2s,box-shadow .2s;z-index:' + Z_FAB + ';';
     btn.appendChild(createIcon('nav'));
     btn.addEventListener('click', function(e) { e.stopPropagation(); toggleNavPanel(); });
     return btn;
@@ -177,26 +236,28 @@
 
   function toggleAIPanel() {
     aiOpen = !aiOpen;
-    if (aiPanel) aiPanel.classList.toggle('hidden', !aiOpen);
+    if (aiModalRoot) aiModalRoot.hidden = !aiOpen;
     if (aiBtn) aiBtn.setAttribute('aria-expanded', String(aiOpen));
     if (aiOpen && aiInput) { aiInput.focus(); }
   }
 
   function toggleNavPanel() {
     navOpen = !navOpen;
-    if (navPanel) navPanel.classList.toggle('hidden', !navOpen);
+    if (navModalRoot) navModalRoot.hidden = !navOpen;
     if (navBtn) navBtn.setAttribute('aria-expanded', String(navOpen));
-    if (navOpen) { renderNavToc(); renderNavA11y(); }
+    if (navOpen) {
+      renderNavitoirChips();
+      if (navMsgEl && navMsgEl.children.length === 0) addNavitoirGreeting();
+    }
   }
 
   function createAIPanel() {
     var wrap = document.createElement('div');
     wrap.id = 'ai-assistant-panel';
-    wrap.className = 'hidden';
     wrap.setAttribute('role', 'dialog');
     wrap.setAttribute('aria-modal', 'true');
     wrap.setAttribute('aria-label', 'AI Assistant');
-    wrap.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:' + PANEL_W + 'px;max-width:96vw;max-height:80vh;border-radius:16px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);z-index:10000;display:flex;flex-direction:column;background:rgba(255,255,255,0.98);border:3px solid #10b981;';
+    wrap.style.cssText = 'width:' + PANEL_W + 'px;max-width:96vw;max-height:80vh;border-radius:16px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);display:flex;flex-direction:column;background:rgba(255,255,255,0.98);border:3px solid #10b981;position:relative;z-index:1;';
 
     var head = document.createElement('div');
     head.style.cssText = 'flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:linear-gradient(to right,#ecfdf5,#d1fae5);border-bottom:1px solid #d1fae5;';
@@ -264,120 +325,156 @@
     aiSend.addEventListener('click', send);
     aiInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') send(); });
 
-    return wrap;
+    aiPanel = wrap;
+    var root = document.createElement('div');
+    root.id = 'ai-modal-root';
+    root.style.cssText = 'position:fixed;inset:0;z-index:' + Z_MODAL + ';display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+    root.hidden = true;
+    var backdrop = document.createElement('div');
+    backdrop.style.cssText = 'position:absolute;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.35);cursor:pointer;';
+    backdrop.setAttribute('aria-hidden', 'true');
+    backdrop.addEventListener('click', toggleAIPanel);
+    root.appendChild(backdrop);
+    root.appendChild(wrap);
+    return root;
   }
 
   function createNavPanel() {
-    var wrap = document.createElement('div');
-    wrap.id = 'navitoir-panel';
-    wrap.className = 'hidden';
-    wrap.setAttribute('role', 'dialog');
-    wrap.setAttribute('aria-modal', 'true');
-    wrap.setAttribute('aria-label', 'Navitoir');
-    wrap.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:' + NAV_PANEL_W + 'px;max-width:96vw;max-height:80vh;border-radius:16px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);z-index:10000;display:flex;flex-direction:column;background:rgba(255,255,255,0.98);border:2px solid rgba(216,180,254,0.3);';
+    var card = document.createElement('div');
+    card.id = 'navitoir-panel';
+    card.setAttribute('role', 'dialog');
+    card.setAttribute('aria-modal', 'true');
+    card.setAttribute('aria-label', 'Navitoir');
+    card.style.cssText = 'width:min(400px,96vw);max-height:90vh;border-radius:24px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);display:flex;flex-direction:column;background:#fff;border:3px solid #6366f1;position:relative;z-index:1;';
 
     var head = document.createElement('div');
-    head.style.cssText = 'flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:linear-gradient(135deg,#6366f1 0%,#4f46e5 100%);color:#fff;';
+    head.style.cssText = 'flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid #e5e7eb;background:linear-gradient(to right,#eef2ff,#f3e8ff);';
+    var headLeft = document.createElement('div');
+    headLeft.style.cssText = 'display:flex;align-items:center;gap:12px;';
+    var iconCircle = document.createElement('div');
+    iconCircle.style.cssText = 'width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#7c3aed);display:flex;align-items:center;justify-content:center;flex-shrink:0;';
+    iconCircle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" style="width:20px;height:20px"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>';
+    headLeft.appendChild(iconCircle);
+    var txt = document.createElement('div');
     var h3 = document.createElement('h3');
-    h3.style.cssText = 'margin:0;font-size:16px;font-weight:600;';
+    h3.style.cssText = 'margin:0;font-size:16px;font-weight:700;color:#1f2937;';
     h3.textContent = 'Navitoir';
-    head.appendChild(h3);
+    var sub = document.createElement('p');
+    sub.style.cssText = 'margin:2px 0 0;font-size:12px;color:#6b7280;';
+    sub.textContent = 'Navigation Assistant';
+    txt.appendChild(h3); txt.appendChild(sub);
+    headLeft.appendChild(txt);
+    head.appendChild(headLeft);
     var closeBtn = document.createElement('button');
-    closeBtn.setAttribute('aria-label', 'Close');
-    closeBtn.textContent = '×';
-    closeBtn.style.cssText = 'width:32px;height:32px;border:0;background:transparent;color:inherit;font-size:20px;cursor:pointer;border-radius:50%;';
+    closeBtn.setAttribute('aria-label', 'Close Navitoir');
+    closeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+    closeBtn.style.cssText = 'padding:8px;border:0;background:transparent;color:#4b5563;cursor:pointer;border-radius:8px;';
     closeBtn.addEventListener('click', toggleNavPanel);
     head.appendChild(closeBtn);
-    wrap.appendChild(head);
+    card.appendChild(head);
 
-    var body = document.createElement('div');
-    body.style.cssText = 'flex:1;overflow-y:auto;padding:16px;';
+    navMsgEl = document.createElement('div');
+    navMsgEl.style.cssText = 'flex:1;overflow-y:auto;padding:16px;min-height:120px;max-height:40vh;background:#f9fafb;';
+    card.appendChild(navMsgEl);
 
-    var navLabel = document.createElement('div');
-    navLabel.style.cssText = 'font-size:12px;font-weight:600;color:#4f46e5;margin-bottom:8px;text-transform:uppercase;';
-    navLabel.textContent = 'Navigate';
-    body.appendChild(navLabel);
-    navTocEl = document.createElement('div');
-    navTocEl.style.cssText = 'margin-bottom:16px;';
-    body.appendChild(navTocEl);
+    var chipsWrap = document.createElement('div');
+    chipsWrap.style.cssText = 'flex-shrink:0;padding:0 16px 8px;';
+    navChipsEl = document.createElement('div');
+    navChipsEl.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;';
+    chipsWrap.appendChild(navChipsEl);
+    card.appendChild(chipsWrap);
 
-    var a11yLabel = document.createElement('div');
-    a11yLabel.style.cssText = 'font-size:12px;font-weight:600;color:#4f46e5;margin-bottom:8px;text-transform:uppercase;';
-    a11yLabel.textContent = 'Accessibility';
-    body.appendChild(a11yLabel);
-    navA11yEl = document.createElement('div');
-    navA11yEl.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;';
-    body.appendChild(navA11yEl);
+    var form = document.createElement('form');
+    form.style.cssText = 'flex-shrink:0;padding:16px;border-top:1px solid #e5e7eb;background:#fff;display:flex;gap:8px;align-items:center;';
+    navInputEl = document.createElement('input');
+    navInputEl.type = 'text';
+    navInputEl.placeholder = 'Search or navigate to a section...';
+    navInputEl.style.cssText = 'flex:1;padding:12px 16px;border:1px solid #d1d5db;border-radius:12px;font-size:14px;';
+    var submitBtn = document.createElement('button');
+    submitBtn.type = 'submit';
+    submitBtn.setAttribute('aria-label', 'Submit');
+    submitBtn.style.cssText = 'padding:12px 16px;border:0;border-radius:12px;background:#6366f1;color:#fff;cursor:pointer;';
+    submitBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>';
+    form.appendChild(navInputEl);
+    form.appendChild(submitBtn);
+    card.appendChild(form);
 
-    wrap.appendChild(body);
-
-    // Open full panel
-    var openFull = document.createElement('button');
-    openFull.textContent = 'Open full accessibility options';
-    openFull.style.cssText = 'margin-top:12px;width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:8px;background:#f9fafb;font-size:13px;cursor:pointer;';
-    openFull.addEventListener('click', function() {
-      if (window.A11yPortfolio && window.A11yPortfolio.openPanel) window.A11yPortfolio.openPanel();
-    });
-    body.appendChild(openFull);
-
-    return wrap;
-  }
-
-  function renderNavToc() {
-    if (!navTocEl) return;
-    navTocEl.innerHTML = '';
-    courseToc.forEach(function(les) {
-      var lesDiv = document.createElement('div');
-      lesDiv.style.cssText = 'margin-bottom:8px;';
-      var lesTitle = document.createElement('div');
-      lesTitle.style.cssText = 'font-weight:600;font-size:14px;color:#1f2937;margin-bottom:4px;';
-      lesTitle.textContent = les.lessonTitle;
-      lesDiv.appendChild(lesTitle);
-      (les.blocks || []).forEach(function(b) {
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.style.cssText = 'display:block;width:100%;text-align:left;padding:6px 10px;margin:2px 0;border:1px solid #e5e7eb;border-radius:6px;background:#fff;font-size:13px;cursor:pointer;color:#374151;';
-        btn.textContent = (b.title || 'Section').slice(0, 50) + (b.title && b.title.length > 50 ? '…' : '');
-        btn.addEventListener('click', function() {
-          tryNavigate(les.lessonId, b.blockId);
-          toggleNavPanel();
-        });
-        lesDiv.appendChild(btn);
-      });
-      navTocEl.appendChild(lesDiv);
-    });
-    if (courseToc.length === 0) {
-      var empty = document.createElement('p');
-      empty.style.cssText = 'color:#6b7280;font-size:13px;';
-      empty.textContent = 'Course outline will appear when the course has loaded.';
-      navTocEl.appendChild(empty);
+    function onNavitoirSend(val) {
+      var r = (val || '').trim();
+      if (!r) return;
+      if (navInputEl) navInputEl.value = '';
+      var userD = document.createElement('div');
+      userD.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:8px;';
+      var userB = document.createElement('div');
+      userB.style.cssText = 'max-width:80%;padding:12px 16px;border-radius:16px;background:#6366f1;color:#fff;font-size:14px;';
+      userB.textContent = r;
+      userD.appendChild(userB);
+      navMsgEl.appendChild(userD);
+      var res = handleNavitoirSubmit(r);
+      var asstD = document.createElement('div');
+      asstD.style.cssText = 'display:flex;justify-content:flex-start;margin-bottom:8px;';
+      var asstB = document.createElement('div');
+      asstB.style.cssText = 'max-width:80%;padding:12px 16px;border-radius:16px;background:#fff;border:1px solid #e5e7eb;font-size:14px;color:#1f2937;';
+      asstB.textContent = res.message;
+      asstD.appendChild(asstB);
+      navMsgEl.appendChild(asstD);
+      navMsgEl.scrollTop = navMsgEl.scrollHeight;
+      if (res.closePanel) setTimeout(toggleNavPanel, 500);
     }
+    form.addEventListener('submit', function(e) { e.preventDefault(); onNavitoirSend(navInputEl.value); });
+    navOnNavitoirSend = onNavitoirSend;
+
+    navPanel = card;
+    var root = document.createElement('div');
+    root.id = 'nav-modal-root';
+    root.style.cssText = 'position:fixed;inset:0;z-index:' + Z_MODAL + ';display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+    root.hidden = true;
+    var backdrop = document.createElement('div');
+    backdrop.style.cssText = 'position:absolute;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.35);cursor:pointer;';
+    backdrop.setAttribute('aria-hidden', 'true');
+    backdrop.addEventListener('click', toggleNavPanel);
+    root.appendChild(backdrop);
+    root.appendChild(card);
+    return root;
   }
 
-  function renderNavA11y() {
-    if (!navA11yEl) return;
-    navA11yEl.innerHTML = '';
-    var a11y = window.A11yPortfolio;
-    var cfg = (a11y && a11y.getConfig && a11y.getConfig()) || {};
-    var st = (a11y && a11y.getState && a11y.getState()) || {};
-    var keys = ['contrast','largeText','textSpacing','focusIndicator','textToSpeech','dyslexia','hideImages','blueLightFilter'];
-    keys.forEach(function(k) {
-      var c = cfg[k];
-      if (!c) return;
-      var v = st[k] || 0;
+  function renderNavitoirChips() {
+    if (!navChipsEl) return;
+    navChipsEl.innerHTML = '';
+    var chips = [];
+    for (var i = 0; i < Math.min(2, courseToc.length); i++) {
+      var les = courseToc[i];
+      chips.push({ v: 'go to ' + (les.lessonTitle || ''), l: (les.lessonTitle || 'Lesson').slice(0, 30) });
+    }
+    if (courseToc[0] && (courseToc[0].blocks || []).length) {
+      var bls = courseToc[0].blocks;
+      for (var j = 0; j < Math.min(2, bls.length); j++) { chips.push({ v: 'show me ' + (bls[j].title || ''), l: (bls[j].title || 'Section').slice(0, 28) }); }
+    }
+    chips.push({ v: 'open accessibility', l: 'Open accessibility' }, { v: 'increase text size', l: 'Increase text size' }, { v: 'increase contrast', l: 'Increase contrast' });
+    chips.forEach(function(c) {
       var btn = document.createElement('button');
       btn.type = 'button';
-      btn.style.cssText = 'padding:8px;border:1px solid #e5e7eb;border-radius:6px;background:' + (v > 0 ? '#eef2ff' : '#fff') + ';font-size:12px;cursor:pointer;color:#374151;';
-      btn.textContent = (c.label || k) + (v > 0 ? ' On' : '');
-      btn.addEventListener('click', function() {
-        if (a11y && a11y.toggle) a11y.toggle(k);
-        setTimeout(renderNavA11y, 50);
-      });
-      navA11yEl.appendChild(btn);
+      btn.textContent = c.l;
+      btn.style.cssText = 'padding:6px 12px;border-radius:8px;border:1px solid #d1d5db;background:#fff;font-size:12px;cursor:pointer;color:#374151;';
+      btn.addEventListener('click', function() { if (navOnNavitoirSend) navOnNavitoirSend(c.v); });
+      navChipsEl.appendChild(btn);
     });
+  }
+
+  function addNavitoirGreeting() {
+    if (!navMsgEl) return;
+    var d = document.createElement('div');
+    d.style.cssText = 'display:flex;justify-content:flex-start;margin-bottom:8px;';
+    var b = document.createElement('div');
+    b.style.cssText = 'max-width:85%;padding:12px 16px;border-radius:16px;background:#fff;border:1px solid #e5e7eb;font-size:14px;color:#374151;line-height:1.5;';
+    b.textContent = "👋 Hi! I'm Navitoir, your navigation assistant. Say 'go to' or 'show me' to jump to a lesson. Say 'open accessibility' for options. Try the chips or type below.";
+    d.appendChild(b);
+    navMsgEl.appendChild(d);
   }
 
   function closePanelsOnClickOutside(e) {
+    if (aiModalRoot && aiModalRoot.contains(e.target)) return;
+    if (navModalRoot && navModalRoot.contains(e.target)) return;
     if (aiOpen && aiPanel && !aiPanel.contains(e.target) && aiBtn && !aiBtn.contains(e.target)) toggleAIPanel();
     if (navOpen && navPanel && !navPanel.contains(e.target) && navBtn && !navBtn.contains(e.target)) toggleNavPanel();
   }
@@ -385,16 +482,16 @@
   function init() {
     aiBtn = createAIButton();
     navBtn = createNavButton();
-    aiPanel = createAIPanel();
-    navPanel = createNavPanel();
+    aiModalRoot = createAIPanel();
+    navModalRoot = createNavPanel();
     document.body.appendChild(aiBtn);
     document.body.appendChild(navBtn);
-    document.body.appendChild(aiPanel);
-    document.body.appendChild(navPanel);
+    document.body.appendChild(aiModalRoot);
+    document.body.appendChild(navModalRoot);
 
     document.addEventListener('click', closePanelsOnClickOutside);
     document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') { if (aiOpen) toggleAIPanel(); if (navOpen) toggleNavPanel(); }
+      if (e.key === 'Escape') { if (aiOpen) { toggleAIPanel(); return; } if (navOpen) toggleNavPanel(); }
     });
 
     var fetch = window.__fetchCourse;
