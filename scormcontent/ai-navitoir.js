@@ -59,6 +59,13 @@
     // Fix run-together list items: "LanguageShort Sentences", "SentencesActive Voice", "VoiceFamiliar Words"
     // (lowercase letter immediately followed by uppercase word/phrase) -> newline + bullet
     t = t.replace(/([a-z])([A-Z][a-z]+(?:\s+[\w&]+)*)/g, '$1\n• $2');
+    // Key Principles list: "Short SentencesActive VoiceFamiliar Words" -> proper bullets
+    t = t.replace(/Key Principles of Plain Language(?=\s*Short Sentences)/i, 'Key Principles of Plain Language\n• ');
+    t = t.replace(/Short Sentences(?=[A-Z])/g, 'Short Sentences\n• ');
+    t = t.replace(/Active Voice(?=[A-Z])/g, 'Active Voice\n• ');
+    // Remove trailing unclosed parenthetical (e.g. "(British expression." when cut mid-sentence)
+    t = t.replace(/\s*\([^)]*$/g, '');
+    t = t.replace(/\s+/g, ' ').trim();
     if (intent === 'objectives') {
       // Extract the 3 objectives: Recognise…, Apply…, Use…
       var re = /(Recognise\s+[^.!?]+[.!?]|Apply\s+[^.!?]+[.!?]|Use\s+[^.!?]+[.!?])/gi;
@@ -116,6 +123,11 @@
     } else if (opts.focusTerm === 'active') {
       var a = sentences.filter(function(s) { return /Active voice|active voice/i.test(s); });
       if (a.length > 0) sentences = a;
+    }
+    // When asking about familiar words: exclude table example cells (British, Bob's your uncle, Egress, etc.).
+    if (opts.excludeTableExamples) {
+      var fam = sentences.filter(function(s) { return !/British|your uncle|Egress|Bob's|Not Recommended/i.test(s); });
+      if (fam.length > 0) sentences = fam;
     }
     var withScore = [];
     for (var i = 0; i < sentences.length; i++) {
@@ -242,9 +254,12 @@
       if (introOnly.length > 0) pool = introOnly;
     }
     var defBoost = / (\b(?:is|means|refers to|avoids|helps create|involves)\b) /i;
+    var isConceptQuery = /\b(short sentences|active voice|familiar words|key principles)\b/i.test(q);
     var scored = pool.map(function(entry) {
       var s = scoreMatch(tokens, entry.text);
       if (isDefinitional && defBoost.test(entry.text)) s += 0.35;
+      // Prefer paragraph over heading for "Short Sentences", "Active Voice", etc. (avoids "Using X." only)
+      if ((isDefinitional || isConceptQuery) && entry.type === 'paragraph') s += 0.25;
       return { entry: entry, score: s };
     }).filter(function(x) { return x.score >= MIN_SCORE; }).sort(function(a, b) { return b.score - a.score; });
     if (scored.length === 0) {
@@ -258,8 +273,10 @@
     var focusTerm = null;
     if (/\bpassive\s+voice\b/i.test(q) && !/\bactive\s+voice\b/i.test(q)) focusTerm = 'passive';
     else if (/\bactive\s+voice\b/i.test(q) && !/\bpassive\s+voice\b/i.test(q)) focusTerm = 'active';
-    var pickOpts = { focusTerm: focusTerm };
-    var maxPick = isDefinitional ? 260 : 150;
+    // For "familiar words (and expressions)": exclude table example cells (British, Bob's your uncle, etc.).
+    var excludeTable = /\b(familiar\s+words?|familiar\s+words?\s+and\s+expressions?)\b/i.test(q);
+    var pickOpts = { focusTerm: focusTerm, excludeTableExamples: excludeTable };
+    var maxPick = (isDefinitional || isConceptQuery) ? 260 : 150;
     var frags = [];
     for (var i = 0; i < use.length; i++) {
       var ex = pickRelevantSentences(use[i].entry.text, tokens, maxPick, pickOpts);
@@ -267,7 +284,7 @@
       if (ex && frags.indexOf(ex) === -1) frags.push(ex);
     }
     if (frags.length === 0) {
-      var fall = pickRelevantSentences(best.entry.text, tokens, isDefinitional ? 260 : 160, pickOpts);
+      var fall = pickRelevantSentences(best.entry.text, tokens, (isDefinitional || isConceptQuery) ? 260 : 160, pickOpts);
       frags = [simplifyForAnswer(fall || (best.entry.text || '').slice(0, 200), '')];
     }
     var msg = 'According to the course: ' + frags.join(' ');
