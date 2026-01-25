@@ -83,20 +83,24 @@
       var lines = t.split('\n').filter(function(l) { return l.trim().length > 0; });
       return lines.slice(0, 6).join('\n');
     }
-    // General: first 1–2 sentences, max ~140 chars
+    // General: first 1–2 sentences, max ~220 chars (was 140; definitions need room to be complete)
     var sep = t.replace(/([.?!])\s+/g, '$1\n').split('\n');
     var taken = [];
     var len = 0;
-    for (var i = 0; i < sep.length && len < 140 && taken.length < 2; i++) {
+    for (var i = 0; i < sep.length && len < 220 && taken.length < 2; i++) {
       var s = sep[i].trim();
       if (s.length >= 10) { taken.push(s); len += s.length; }
     }
-    return cleanText(taken.length ? taken.join(' ') : t.slice(0, 130));
+    return cleanText(taken.length ? taken.join(' ') : t.slice(0, 200));
   }
 
-  /** Get the 1–2 most relevant sentences from text (by query token overlap), max len. */
-  function pickRelevantSentences(text, queryTokens, maxLen) {
+  /**
+   * Get the 1–2 most relevant sentences from text (by query token overlap and optional focus).
+   * opts.focusTerm: 'passive' = only sentences about passive voice; 'active' = only about active voice.
+   */
+  function pickRelevantSentences(text, queryTokens, maxLen, opts) {
     maxLen = maxLen || 200;
+    opts = opts || {};
     if (!text || !queryTokens.length) return '';
     // Split on [.?!] followed by space, and on [.?!] directly before uppercase (e.g. "language.Apply")
     var block = text.replace(/([.?!])([A-Z])/g, '$1\n$2').replace(/([.?!])\s+/g, '$1\n');
@@ -104,6 +108,14 @@
     if (sentences.length === 0) {
       var z = text.slice(0, maxLen);
       return cleanText(z + (text.length > maxLen ? '…' : ''));
+    }
+    // When user asks only about passive or only about active voice, keep just those sentences (avoid irrelevant half).
+    if (opts.focusTerm === 'passive') {
+      var p = sentences.filter(function(s) { return /Passive voice|passive voice/i.test(s); });
+      if (p.length > 0) sentences = p;
+    } else if (opts.focusTerm === 'active') {
+      var a = sentences.filter(function(s) { return /Active voice|active voice/i.test(s); });
+      if (a.length > 0) sentences = a;
     }
     var withScore = [];
     for (var i = 0; i < sentences.length; i++) {
@@ -117,7 +129,12 @@
       return cleanText(fall + (text.length > maxLen ? '…' : ''));
     }
     var out = taken.join(' ').trim();
-    if (out.length > maxLen) out = out.slice(0, maxLen - 1).replace(/\s+\S*$/, '') + '…';
+    // Prefer cutting at a sentence boundary; only truncate with … when necessary
+    if (out.length > maxLen) {
+      var at = out.lastIndexOf('. ', maxLen);
+      if (at > maxLen * 0.6) out = out.slice(0, at + 1);
+      else out = out.slice(0, maxLen - 1).replace(/\s+\S*$/, '') + '…';
+    }
     return cleanText(out);
   }
 
@@ -203,6 +220,27 @@
       var plainOnly = pool.filter(function(e) { return /plain\s+language|plain\s+language\s+means/i.test(e.text); });
       if (plainOnly.length > 0) pool = plainOnly;
     }
+    // --- Topic-specific pool filters: active/passive, short sentences, key principles, familiar words, introduction ---
+    if (/\b(active\s+voice|passive\s+voice)\b/i.test(q)) {
+      var voiceOnly = pool.filter(function(e) { return /active\s+voice|passive\s+voice/i.test(e.text); });
+      if (voiceOnly.length > 0) pool = voiceOnly;
+    }
+    if (/\bshort\s+sentences\b/i.test(q)) {
+      var shortOnly = pool.filter(function(e) { return /short\s+sentences/i.test(e.text); });
+      if (shortOnly.length > 0) pool = shortOnly;
+    }
+    if (/\b(key\s+principles?|principles\s+of\s+plain)\b/i.test(q)) {
+      var princOnly = pool.filter(function(e) { return /key\s+principles|Short\s+Sentences|Active\s+Voice|Familiar\s+Words/i.test(e.text); });
+      if (princOnly.length > 0) pool = princOnly;
+    }
+    if (/\b(familiar\s+words?|everyday\s+words?|common\s+words?)\b/i.test(q)) {
+      var famOnly = pool.filter(function(e) { return /familiar\s+words|Familiar\s+Words|everyday|common\s+words/i.test(e.text); });
+      if (famOnly.length > 0) pool = famOnly;
+    }
+    if (/\b(introduction|intro|what is this course|course about)\b/i.test(q)) {
+      var introOnly = pool.filter(function(e) { return /In this course, you'll learn|workplace communication|Words shape/i.test(e.text); });
+      if (introOnly.length > 0) pool = introOnly;
+    }
     var defBoost = / (\b(?:is|means|refers to|avoids|helps create|involves)\b) /i;
     var scored = pool.map(function(entry) {
       var s = scoreMatch(tokens, entry.text);
@@ -216,15 +254,21 @@
     var best = scored[0];
     // Use only the best match to avoid mixing different blocks (e.g. Key Principles + objectives)
     var use = [best];
+    // For "what is passive voice" vs "what is active voice": return only the asked‑for definition (no irrelevant half).
+    var focusTerm = null;
+    if (/\bpassive\s+voice\b/i.test(q) && !/\bactive\s+voice\b/i.test(q)) focusTerm = 'passive';
+    else if (/\bactive\s+voice\b/i.test(q) && !/\bpassive\s+voice\b/i.test(q)) focusTerm = 'active';
+    var pickOpts = { focusTerm: focusTerm };
+    var maxPick = isDefinitional ? 260 : 150;
     var frags = [];
     for (var i = 0; i < use.length; i++) {
-      var ex = pickRelevantSentences(use[i].entry.text, tokens, 150);
+      var ex = pickRelevantSentences(use[i].entry.text, tokens, maxPick, pickOpts);
       if (ex) ex = simplifyForAnswer(ex, '');
       if (ex && frags.indexOf(ex) === -1) frags.push(ex);
     }
     if (frags.length === 0) {
-      var fall = pickRelevantSentences(best.entry.text, tokens, 160);
-      frags = [simplifyForAnswer(fall || (best.entry.text || '').slice(0, 140), '')];
+      var fall = pickRelevantSentences(best.entry.text, tokens, isDefinitional ? 260 : 160, pickOpts);
+      frags = [simplifyForAnswer(fall || (best.entry.text || '').slice(0, 200), '')];
     }
     var msg = 'According to the course: ' + frags.join(' ');
     // Preserve newlines (list formatting); clean each line
