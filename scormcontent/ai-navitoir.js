@@ -142,21 +142,38 @@
   }
 
   function tryNavigate(lessonId, blockId) {
-    var sel = 'a[href*="' + (lessonId || '').replace(/["\\]/g, '\\$&') + '"]';
-    try {
-      var a = document.querySelector(sel);
-      if (a) { a.click(); return true; }
-    } catch (e) {}
-    var ids = [
-      blockId && ('[data-block-id="' + blockId + '"], [id="block-' + blockId + '"], [id="' + blockId + '"]'),
-      lessonId && ('[data-lesson-id="' + lessonId + '"], [id="lesson-' + lessonId + '"], [id="' + lessonId + '"]')
-    ].filter(Boolean);
-    for (var i = 0; i < ids.length; i++) {
-      try {
-        var el = document.querySelector(ids[i]);
-        if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return true; }
-      } catch (e) {}
+    function tryBlockScroll() {
+      if (!blockId) return false;
+      var sels = ['[data-block-id="' + blockId + '"]', '[id="block-' + blockId + '"]', '[id="' + blockId + '"]'];
+      for (var i = 0; i < sels.length; i++) {
+        try {
+          var el = document.querySelector(sels[i]);
+          if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return true; }
+        } catch (e) {}
+      }
+      return false;
     }
+    function tryLessonScroll() {
+      if (!lessonId) return false;
+      var sels = ['[data-lesson-id="' + lessonId + '"]', '[id="lesson-' + lessonId + '"]', '[id="' + lessonId + '"]'];
+      for (var i = 0; i < sels.length; i++) {
+        try {
+          var el = document.querySelector(sels[i]);
+          if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return true; }
+        } catch (e) {}
+      }
+      return false;
+    }
+    if (tryBlockScroll() || tryLessonScroll()) return true;
+    var linkSel = 'a[href*="' + (lessonId || '').replace(/["\\]/g, '\\$&') + '"]';
+    try {
+      var a = document.querySelector(linkSel);
+      if (a) {
+        a.click();
+        if (blockId) setTimeout(function() { tryBlockScroll() || tryLessonScroll(); }, 600);
+        return true;
+      }
+    } catch (e) {}
     var app = document.getElementById('app');
     if (app) { app.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     return false;
@@ -201,6 +218,26 @@
       if (v !== cur && a11y && a11y.set) { a11y.set(key, v); return { message: '✅ ' + m.name + ' ' + (v === 0 ? 'off' : 'on'), closePanel: false }; }
       return { message: 'ℹ️ ' + m.name + ' is already ' + (cur === 0 ? 'off' : 'on') + '.', closePanel: false };
     }
+    if (any(['site', 'website', 'web site', 'external', 'external link', 'http', 'www', 'url', 'outside link', 'open link', 'visit site', 'open site', 'go to site'])) {
+      return { message: '⚠️ Some external links may require completing a test or prerequisite first. Use the course menu to find the resource, or check the course for requirements.', closePanel: false };
+    }
+    var navTokens = tokenize(q);
+    var navStop = ['go', 'to', 'show', 'me', 'take', 'navigate', 'find', 'see', 'open', 'get', 'want', 'view'];
+    var searchTerms = navTokens.filter(function(w) { return navStop.indexOf(w) < 0; });
+    var terms = (searchTerms.length > 0 ? searchTerms : navTokens);
+    if (courseIndex.length > 0 && terms.length > 0) {
+      var scored = courseIndex.map(function(e) {
+        var s = scoreMatch(terms, e.text);
+        if (e.type === 'heading') s += 0.05;
+        return { e: e, score: s };
+      }).filter(function(x) { return x.score >= 0.25; }).sort(function(a, b) { return b.score - a.score; });
+      if (scored.length > 0) {
+        var hit = scored[0].e;
+        tryNavigate(hit.lessonId, hit.blockId);
+        var label = (hit.text || '').length <= 50 ? hit.text : (hit.text || '').slice(0, 47) + '…';
+        return { message: '✅ Navigating to ' + (label || hit.lessonTitle || 'that section') + '…', closePanel: true };
+      }
+    }
     for (var li = 0; li < courseToc.length; li++) {
       var les = courseToc[li];
       var lt = (les.lessonTitle || '').toLowerCase();
@@ -213,7 +250,7 @@
       }
     }
     var first = courseToc[0];
-    return { message: 'I can navigate to a lesson or control accessibility. Try: "Go to ' + (first ? first.lessonTitle : 'Introduction') + '", "Open accessibility", "Increase text size".', closePanel: false };
+    return { message: 'I can take you to any topic or lesson in the course (e.g. "active voice", "key principles", "' + (first ? first.lessonTitle : 'Introduction') + '"). I can also open accessibility or change settings. Try: "Go to active voice", "Open accessibility.", "Increase text size".', closePanel: false };
   }
 
   // --- DOM: buttons and panels ---
@@ -478,7 +515,7 @@
       var bls = courseToc[0].blocks;
       for (var j = 0; j < Math.min(2, bls.length); j++) { chips.push({ v: 'show me ' + (bls[j].title || ''), l: (bls[j].title || 'Section').slice(0, 28) }); }
     }
-    chips.push({ v: 'open accessibility', l: 'Open accessibility' }, { v: 'increase text size', l: 'Increase text size' }, { v: 'increase contrast', l: 'Increase contrast' });
+    chips.push({ v: 'go to active voice', l: 'Active voice' }, { v: 'go to key principles', l: 'Key principles' }, { v: 'open accessibility', l: 'Open accessibility' }, { v: 'increase text size', l: 'Increase text size' }, { v: 'increase contrast', l: 'Increase contrast' });
     chips.forEach(function(c) {
       var btn = document.createElement('button');
       btn.type = 'button';
