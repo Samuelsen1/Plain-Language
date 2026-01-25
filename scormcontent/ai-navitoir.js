@@ -47,7 +47,7 @@
   }
 
   /**
-   * Simplify content before showing as answer: remove parentheticals, trim to essentials.
+   * Simplify content before showing as answer: remove parentheticals, fix run-together, trim to essentials.
    * No external API; pure local simplification for concise, readable answers.
    */
   function simplifyForAnswer(text, intent) {
@@ -56,6 +56,9 @@
     // Remove parenthetical asides: (…), (X = Y), (47 words — …)
     t = t.replace(/\s*\([^)]*\)\s*/g, ' ');
     t = t.replace(/\s+/g, ' ').trim();
+    // Fix run-together list items: "LanguageShort Sentences", "SentencesActive Voice", "VoiceFamiliar Words"
+    // (lowercase letter immediately followed by uppercase word/phrase) -> newline + bullet
+    t = t.replace(/([a-z])([A-Z][a-z]+(?:\s+[\w&]+)*)/g, '$1\n• $2');
     if (intent === 'objectives') {
       // Extract the 3 objectives: Recognise…, Apply…, Use…
       var re = /(Recognise\s+[^.!?]+[.!?]|Apply\s+[^.!?]+[.!?]|Use\s+[^.!?]+[.!?])/gi;
@@ -75,7 +78,12 @@
       }
       if (taken.length) return taken.map(function(s) { return '• ' + cleanText(s); }).join('\n');
     }
-    // General: first 1–2 sentences, max ~140 chars; drop any remaining parentheticals
+    // If run-together fix produced list lines, keep them (up to 6 lines) and return
+    if (/\n• /.test(t)) {
+      var lines = t.split('\n').filter(function(l) { return l.trim().length > 0; });
+      return lines.slice(0, 6).join('\n');
+    }
+    // General: first 1–2 sentences, max ~140 chars
     var sep = t.replace(/([.?!])\s+/g, '$1\n').split('\n');
     var taken = [];
     var len = 0;
@@ -191,7 +199,8 @@
       return { ok: false, message: 'I couldn\'t find that in the course. Try: ' + (topics.join(', ') || 'plain language, inclusive communication') + '.' };
     }
     var best = scored[0];
-    var use = (isDefinitional || (best.score >= 0.7 && scored.length >= 2 && scored[1].score < best.score * 0.6)) ? [best] : scored.slice(0, 2);
+    // Use only the best match to avoid mixing different blocks (e.g. Key Principles + objectives)
+    var use = [best];
     var frags = [];
     for (var i = 0; i < use.length; i++) {
       var ex = pickRelevantSentences(use[i].entry.text, tokens, 150);
@@ -203,7 +212,11 @@
       frags = [simplifyForAnswer(fall || (best.entry.text || '').slice(0, 140), '')];
     }
     var msg = 'According to the course: ' + frags.join(' ');
-    return { ok: true, message: cleanText(msg) };
+    // Preserve newlines (list formatting); clean each line
+    var final = (msg.indexOf('\n') >= 0)
+      ? msg.split('\n').map(function(line) { return cleanText(line); }).join('\n')
+      : cleanText(msg);
+    return { ok: true, message: final };
   }
 
   // --- DOM: button and panel ---
