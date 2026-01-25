@@ -198,10 +198,14 @@ button:active {
   transform: scale(0.98);
 }
 
-/* AI FAB */
+/* AI & Navitoir FABs */
 .ai-nav-fab:hover {
   transform: scale(1.1);
   box-shadow: 0 12px 48px rgba(59, 130, 246, 0.45);
+}
+
+#navitoir-toggle:hover {
+  box-shadow: 0 12px 48px rgba(99, 102, 241, 0.45);
 }
 
 .ai-nav-fab:focus {
