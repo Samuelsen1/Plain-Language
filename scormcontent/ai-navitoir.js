@@ -32,6 +32,43 @@
     return queryTokens.length ? n / queryTokens.length : 0;
   }
 
+  /** Clean text: fix spaces, punctuation, and capitalization. */
+  function cleanText(s) {
+    if (!s || typeof s !== 'string') return '';
+    var t = s.replace(/\s+/g, ' ').trim();
+    t = t.replace(/\s+([.,;:!?])/g, '$1');
+    if (t && !/[.?!]$/.test(t) && !/…$/.test(t)) t = t.replace(/\s*$/, '.');
+    if (t) t = t.charAt(0).toUpperCase() + t.slice(1);
+    if (t && /[.?!]$/.test(t)) t = t.replace(/[.?!]+$/, function(m) { return m.charAt(0); });
+    return t;
+  }
+
+  /** Get the 1–2 most relevant sentences from text (by query token overlap), max len. */
+  function pickRelevantSentences(text, queryTokens, maxLen) {
+    maxLen = maxLen || 200;
+    if (!text || !queryTokens.length) return '';
+    var block = text.replace(/([.?!])\s+/g, '$1\n');
+    var sentences = block.split('\n').map(function(s) { return s.trim(); }).filter(function(s) { return s.length >= 12; });
+    if (sentences.length === 0) {
+      var z = text.slice(0, maxLen);
+      return cleanText(z + (text.length > maxLen ? '…' : ''));
+    }
+    var withScore = [];
+    for (var i = 0; i < sentences.length; i++) {
+      var sc = scoreMatch(queryTokens, sentences[i]);
+      if (sc > 0) withScore.push({ s: sentences[i], sc: sc });
+    }
+    withScore.sort(function(a, b) { return b.sc - a.sc; });
+    var taken = withScore.slice(0, 2).map(function(x) { return x.s; });
+    if (taken.length === 0) {
+      var fall = text.slice(0, maxLen);
+      return cleanText(fall + (text.length > maxLen ? '…' : ''));
+    }
+    var out = taken.join(' ').trim();
+    if (out.length > maxLen) out = out.slice(0, maxLen - 1).replace(/\s+\S*$/, '') + '…';
+    return cleanText(out);
+  }
+
   // --- Course index & TOC ---
   var courseIndex = [];  // { text, lessonId, blockId, lessonTitle, type }
   var courseToc = [];    // { lessonId, lessonTitle, blocks: [{ blockId, title }] }
@@ -79,25 +116,29 @@
 
   function answerFromCourse(q) {
     if (courseIndex.length === 0) return { ok: false, message: 'Course content is still loading. Please try again in a moment.' };
-    const tokens = tokenize(q);
+    var tokens = tokenize(q);
     if (!tokens.length) return { ok: false, message: 'Please ask a question about the course.' };
+    var MIN_SCORE = 0.35;
     var scored = courseIndex.map(function(entry) {
       return { entry: entry, score: scoreMatch(tokens, entry.text) };
-    }).filter(function(x) { return x.score > 0; }).sort(function(a, b) { return b.score - a.score; });
-    var top = scored.slice(0, 4);
-    if (top.length === 0) {
-      var topics = courseToc.slice(0, 5).map(function(t) { return t.lessonTitle; }).filter(Boolean);
-      return { ok: false, message: 'I couldn\'t find that in the course. Try rephrasing or ask about: ' + (topics.join(', ') || 'plain language, inclusive communication.') + '.' };
+    }).filter(function(x) { return x.score >= MIN_SCORE; }).sort(function(a, b) { return b.score - a.score; });
+    if (scored.length === 0) {
+      var topics = courseToc.slice(0, 4).map(function(t) { return t.lessonTitle; }).filter(Boolean);
+      return { ok: false, message: 'I couldn\'t find that in the course. Try: ' + (topics.join(', ') || 'plain language, inclusive communication') + '.' };
     }
-    var parts = [];
-    parts.push('According to the course:');
-    top.forEach(function(t) {
-      var e = t.entry;
-      var excerpt = (e.text || '').slice(0, 320);
-      if (excerpt.length < (e.text || '').length) excerpt += '…';
-      if (excerpt) parts.push('• ' + excerpt);
-    });
-    return { ok: true, message: parts.join('\n\n') };
+    var best = scored[0];
+    var use = (best.score >= 0.7 && scored.length >= 2 && scored[1].score < best.score * 0.6) ? [best] : scored.slice(0, 2);
+    var frags = [];
+    for (var i = 0; i < use.length; i++) {
+      var ex = pickRelevantSentences(use[i].entry.text, tokens, 180);
+      if (ex && frags.indexOf(ex) === -1) frags.push(ex);
+    }
+    if (frags.length === 0) {
+      var fall = pickRelevantSentences(best.entry.text, tokens, 200);
+      frags = [fall || cleanText((best.entry.text || '').slice(0, 160) + '…')];
+    }
+    var msg = 'According to the course: ' + frags.join(' ');
+    return { ok: true, message: cleanText(msg) };
   }
 
   function tryNavigate(lessonId, blockId) {
