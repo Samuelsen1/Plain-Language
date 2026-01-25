@@ -27,7 +27,9 @@
     let n = 0;
     for (const q of queryTokens) {
       if (set.has(q)) n++;
-      else if (words.some(w => w.indexOf(q) >= 0 || q.indexOf(w) >= 0)) n += 0.5;
+      // Only partial when the doc word contains the query (e.g. "inclusive" in "inclusively");
+      // avoid "objectives" matching doc "object" (q contains w would give false positive)
+      else if (words.some(function(w) { return w.length >= 3 && w.indexOf(q) >= 0; })) n += 0.5;
     }
     return queryTokens.length ? n / queryTokens.length : 0;
   }
@@ -45,6 +47,46 @@
     // Fix run-together like "you'llRecognise" (contraction directly followed by capital)
     t = t.replace(/([a-z]'[a-z]*)([A-Z])/g, '$1 $2');
     return t;
+  }
+
+  /**
+   * Simplify content before showing as answer: remove parentheticals, trim to essentials.
+   * No external API; pure local simplification for concise, readable answers.
+   */
+  function simplifyForAnswer(text, intent) {
+    if (!text || typeof text !== 'string') return '';
+    var t = text.replace(/\s+/g, ' ').trim();
+    // Remove parenthetical asides: (…), (X = Y), (47 words — …)
+    t = t.replace(/\s*\([^)]*\)\s*/g, ' ');
+    t = t.replace(/\s+/g, ' ').trim();
+    if (intent === 'objectives') {
+      // Extract the 3 objectives: Recognise…, Apply…, Use…
+      var re = /(Recognise\s+[^.!?]+[.!?]|Apply\s+[^.!?]+[.!?]|Use\s+[^.!?]+[.!?])/gi;
+      var ms = t.match(re);
+      if (ms && ms.length >= 1) {
+        return ms.slice(0, 3).map(function(s) { return '• ' + cleanText(s); }).join(' ');
+      }
+      // Fallback: find sentences containing Recognise/Apply/Use and take the objective phrase
+      var sents = t.split(/(?<=[.!?])\s+/);
+      var taken = [];
+      for (var i = 0; i < sents.length && taken.length < 3; i++) {
+        var s = sents[i];
+        if (/(Recognise|Apply|Use)\s+/i.test(s) && s.length < 130) {
+          var m = s.match(/(Recognise|Apply|Use)\s+[^.!?]+[.!?]/i);
+          taken.push(m ? m[0] : s);
+        }
+      }
+      if (taken.length) return taken.map(function(s) { return '• ' + cleanText(s); }).join(' ');
+    }
+    // General: first 1–2 sentences, max ~140 chars; drop any remaining parentheticals
+    var sep = t.replace(/([.?!])\s+/g, '$1\n').split('\n');
+    var taken = [];
+    var len = 0;
+    for (var i = 0; i < sep.length && len < 140 && taken.length < 2; i++) {
+      var s = sep[i].trim();
+      if (s.length >= 10) { taken.push(s); len += s.length; }
+    }
+    return cleanText(taken.length ? taken.join(' ') : t.slice(0, 130));
   }
 
   /** Get the 1–2 most relevant sentences from text (by query token overlap), max len. */
@@ -125,8 +167,24 @@
     if (!tokens.length) return { ok: false, message: 'Please ask a question about the course.' };
     var MIN_SCORE = 0.35;
     var isDefinitional = /what is|define|meaning of|what does .+ mean/i.test(q);
+    var isObjectives = /objectives?|goals?|learning outcomes?|what will I learn|what are the objectives/i.test(q);
+    var wantExamples = /example|quiz|question|practice/i.test(q);
+    // Exclude quiz items (question/answer) unless user asks for examples
+    var typeOk = function(e) { return wantExamples || (e.type !== 'question' && e.type !== 'answer'); };
+    // --- Objectives: explicit block match only ---
+    if (isObjectives) {
+      var obj = courseIndex.filter(function(e) {
+        return typeOk(e) && (e.type === 'paragraph' || e.type === 'heading') &&
+          /At the end of the course|Objectives\b/i.test(e.text) &&
+          /Recognise|Apply|Use inclusive/i.test(e.text);
+      })[0];
+      if (obj) {
+        var simple = simplifyForAnswer(obj.text, 'objectives');
+        return { ok: true, message: 'According to the course, the objectives are: ' + simple };
+      }
+    }
     var defBoost = / (\b(?:is|means|refers to|avoids|helps create|involves)\b) /i;
-    var scored = courseIndex.map(function(entry) {
+    var scored = courseIndex.filter(function(e) { return typeOk(e); }).map(function(entry) {
       var s = scoreMatch(tokens, entry.text);
       if (isDefinitional && defBoost.test(entry.text)) s += 0.35;
       return { entry: entry, score: s };
@@ -136,16 +194,16 @@
       return { ok: false, message: 'I couldn\'t find that in the course. Try: ' + (topics.join(', ') || 'plain language, inclusive communication') + '.' };
     }
     var best = scored[0];
-    // For "what is X" / define: prefer one passage that explains; avoid mixing outcomes + intro
     var use = (isDefinitional || (best.score >= 0.7 && scored.length >= 2 && scored[1].score < best.score * 0.6)) ? [best] : scored.slice(0, 2);
     var frags = [];
     for (var i = 0; i < use.length; i++) {
-      var ex = pickRelevantSentences(use[i].entry.text, tokens, 180);
+      var ex = pickRelevantSentences(use[i].entry.text, tokens, 150);
+      if (ex) ex = simplifyForAnswer(ex, '');
       if (ex && frags.indexOf(ex) === -1) frags.push(ex);
     }
     if (frags.length === 0) {
-      var fall = pickRelevantSentences(best.entry.text, tokens, 200);
-      frags = [fall || cleanText((best.entry.text || '').slice(0, 160) + '…')];
+      var fall = pickRelevantSentences(best.entry.text, tokens, 160);
+      frags = [simplifyForAnswer(fall || (best.entry.text || '').slice(0, 140), '')];
     }
     var msg = 'According to the course: ' + frags.join(' ');
     return { ok: true, message: cleanText(msg) };
@@ -292,7 +350,7 @@
     img.src = 'images/ai.png';
     img.alt = '';
     img.setAttribute('aria-hidden', 'true');
-    img.style.cssText = 'width:28px;height:28px;object-fit:contain;filter:brightness(0) invert(1);';
+    img.style.cssText = 'width:51px;height:51px;object-fit:contain;filter:brightness(0) invert(1);';
     btn.appendChild(img);
     btn.addEventListener('click', function(e) { e.stopPropagation(); toggleAIPanel(); });
     return btn;
