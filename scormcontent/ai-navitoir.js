@@ -311,7 +311,7 @@
     btn.className = 'ai-nav-fab';
     btn.style.cssText = 'position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#10b981 0%,#059669 100%);box-shadow:0 10px 40px rgba(16,185,129,0.4);color:#fff;transition:transform .2s,box-shadow .2s;z-index:' + Z_FAB + ';';
     var img = document.createElement('img');
-    img.src = 'images/ai.png';
+    img.src = 'images/teacher.png';
     img.alt = '';
     img.setAttribute('aria-hidden', 'true');
     img.style.cssText = 'width:51px;height:51px;object-fit:contain;filter:brightness(0) invert(1);';
