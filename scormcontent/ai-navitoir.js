@@ -40,6 +40,10 @@
     if (t && !/[.?!]$/.test(t) && !/…$/.test(t)) t = t.replace(/\s*$/, '.');
     if (t) t = t.charAt(0).toUpperCase() + t.slice(1);
     if (t && /[.?!]$/.test(t)) t = t.replace(/[.?!]+$/, function(m) { return m.charAt(0); });
+    // Ensure space after .?! when followed by letter (fixes "language.Apply", "strategies.Use")
+    t = t.replace(/([.?!])([A-Za-z])/g, '$1 $2');
+    // Fix run-together like "you'llRecognise" (contraction directly followed by capital)
+    t = t.replace(/([a-z]'[a-z]*)([A-Z])/g, '$1 $2');
     return t;
   }
 
@@ -47,7 +51,8 @@
   function pickRelevantSentences(text, queryTokens, maxLen) {
     maxLen = maxLen || 200;
     if (!text || !queryTokens.length) return '';
-    var block = text.replace(/([.?!])\s+/g, '$1\n');
+    // Split on [.?!] followed by space, and on [.?!] directly before uppercase (e.g. "language.Apply")
+    var block = text.replace(/([.?!])([A-Z])/g, '$1\n$2').replace(/([.?!])\s+/g, '$1\n');
     var sentences = block.split('\n').map(function(s) { return s.trim(); }).filter(function(s) { return s.length >= 12; });
     if (sentences.length === 0) {
       var z = text.slice(0, maxLen);
@@ -119,15 +124,20 @@
     var tokens = tokenize(q);
     if (!tokens.length) return { ok: false, message: 'Please ask a question about the course.' };
     var MIN_SCORE = 0.35;
+    var isDefinitional = /what is|define|meaning of|what does .+ mean/i.test(q);
+    var defBoost = / (\b(?:is|means|refers to|avoids|helps create|involves)\b) /i;
     var scored = courseIndex.map(function(entry) {
-      return { entry: entry, score: scoreMatch(tokens, entry.text) };
+      var s = scoreMatch(tokens, entry.text);
+      if (isDefinitional && defBoost.test(entry.text)) s += 0.35;
+      return { entry: entry, score: s };
     }).filter(function(x) { return x.score >= MIN_SCORE; }).sort(function(a, b) { return b.score - a.score; });
     if (scored.length === 0) {
       var topics = courseToc.slice(0, 4).map(function(t) { return t.lessonTitle; }).filter(Boolean);
       return { ok: false, message: 'I couldn\'t find that in the course. Try: ' + (topics.join(', ') || 'plain language, inclusive communication') + '.' };
     }
     var best = scored[0];
-    var use = (best.score >= 0.7 && scored.length >= 2 && scored[1].score < best.score * 0.6) ? [best] : scored.slice(0, 2);
+    // For "what is X" / define: prefer one passage that explains; avoid mixing outcomes + intro
+    var use = (isDefinitional || (best.score >= 0.7 && scored.length >= 2 && scored[1].score < best.score * 0.6)) ? [best] : scored.slice(0, 2);
     var frags = [];
     for (var i = 0; i < use.length; i++) {
       var ex = pickRelevantSentences(use[i].entry.text, tokens, 180);
