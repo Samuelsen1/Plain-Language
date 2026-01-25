@@ -314,7 +314,7 @@
     img.src = 'images/teacher.png';
     img.alt = '';
     img.setAttribute('aria-hidden', 'true');
-    img.style.cssText = 'width:51px;height:51px;object-fit:contain;filter:brightness(0) invert(1);';
+    img.style.cssText = 'width:52px;height:52px;object-fit:contain;image-rendering:-webkit-optimize-contrast;';
     btn.appendChild(img);
     btn.addEventListener('click', function(e) { e.stopPropagation(); toggleAIPanel(); });
     return btn;
