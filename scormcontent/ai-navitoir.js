@@ -188,8 +188,23 @@
         return { ok: true, message: 'According to the course, the objectives are:\n' + simple };
       }
     }
+    // --- Inclusive language vs Plain language: require "inclusive" in the entry when the query asks about inclusive ---
+    var askInclusive = /\binclusive\b/i.test(q);
+    var pool = courseIndex.filter(function(e) { return typeOk(e); });
+    if (askInclusive) {
+      var inclusiveOnly = pool.filter(function(e) { return /inclusive/i.test(e.text); });
+      if (inclusiveOnly.length === 0) {
+        return { ok: false, message: 'I couldn\'t find a definition of inclusive language in the course. Try the "Inclusive Language" section, or ask "what is plain language" for the difference.' };
+      }
+      pool = inclusiveOnly;
+    }
+    // When asking about "plain language" (and not inclusive), restrict to entries that discuss plain language
+    if (/\bplain\b/i.test(q) && /\blanguage\b/i.test(q) && !/\binclusive\b/i.test(q)) {
+      var plainOnly = pool.filter(function(e) { return /plain\s+language|plain\s+language\s+means/i.test(e.text); });
+      if (plainOnly.length > 0) pool = plainOnly;
+    }
     var defBoost = / (\b(?:is|means|refers to|avoids|helps create|involves)\b) /i;
-    var scored = courseIndex.filter(function(e) { return typeOk(e); }).map(function(entry) {
+    var scored = pool.map(function(entry) {
       var s = scoreMatch(tokens, entry.text);
       if (isDefinitional && defBoost.test(entry.text)) s += 0.35;
       return { entry: entry, score: s };
