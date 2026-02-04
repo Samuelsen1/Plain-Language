@@ -214,7 +214,7 @@
       })[0];
       if (obj) {
         var simple = simplifyForAnswer(obj.text, 'objectives');
-        return { ok: true, message: 'According to the course, the objectives are:\n' + simple };
+        return { ok: true, message: simple };
       }
     }
     // --- Inclusive language vs Plain language: require "inclusive" in the entry when the query asks about inclusive ---
@@ -287,7 +287,7 @@
       var fall = pickRelevantSentences(best.entry.text, tokens, (isDefinitional || isConceptQuery) ? 260 : 160, pickOpts);
       frags = [simplifyForAnswer(fall || (best.entry.text || '').slice(0, 200), '')];
     }
-    var msg = 'According to the course: ' + frags.join(' ');
+    var msg = frags.join(' ');
     // Preserve newlines (list formatting); clean each line
     var final = (msg.indexOf('\n') >= 0)
       ? msg.split('\n').map(function(line) { return cleanText(line); }).join('\n')
