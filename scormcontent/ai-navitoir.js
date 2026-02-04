@@ -7,6 +7,23 @@
 
   const PANEL_W = 360;
 
+  /**
+   * Glossary: simple explanations for key course terms (no copy-paste from course).
+   * Used when the user asks what something is, so answers stay clear and consistent.
+   */
+  var GLOSSARY = [
+    { pattern: /\bplain\s+language\b/i, message: 'Plain language is writing so your reader can quickly find, understand, and use the information. It uses clear words, short sentences, and a direct style—no jargon or unnecessary complexity.' },
+    { pattern: /\binclusive\s+language\b/i, message: 'Inclusive language is wording that avoids excluding, stereotyping, or making assumptions about people. It helps everyone feel respected and included at work.' },
+    { pattern: /\bactive\s+voice\b/i, message: 'Active voice means the subject of the sentence does the action. For example: "The team wrote the report." It is clear and direct.' },
+    { pattern: /\bpassive\s+voice\b/i, message: 'Passive voice means the action is done to the subject, or the doer is in the background. For example: "The report was written by the team." It can feel indirect and sometimes confuse readers.' },
+    { pattern: /\bshort\s+sentences?\b/i, message: 'Short sentences mean keeping each sentence to one main idea and around 15–20 words or fewer. It makes your writing easier to read and understand.' },
+    { pattern: /\bfamiliar\s+words?\b|\beveryday\s+words?\b|\bcommon\s+words?\b/i, message: 'Familiar words are everyday words that most people know. You avoid jargon and overly formal terms so the goal is clarity, not impressing the reader.' },
+    { pattern: /\bkey\s+principles?\b|\bprinciples\s+of\s+plain\b/i, message: 'The key principles of plain language are:\n• Short sentences\n• Active voice\n• Familiar words and expressions' },
+    { pattern: /\bintroduction\b|\bintro\b|\bwhat\s+is\s+this\s+course\b|\bcourse\s+about\b/i, message: 'This course teaches you how to make workplace communication clear, concise, and inclusive. You will learn plain language and inclusive language.' },
+    { pattern: /\bobjectives?\b|\blearning\s+outcomes?\b|\bwhat\s+will\s+I\s+learn\b/i, message: null }
+  ];
+  // objectives: null = keep existing course-based behaviour (bullet list from course)
+
   function stripHtml(html) {
     if (!html || typeof html !== 'string') return '';
     const d = document.createElement('div');
@@ -202,6 +219,15 @@
     var MIN_SCORE = 0.35;
     var isDefinitional = /what is|define|meaning of|what does .+ mean/i.test(q);
     var isObjectives = /objectives?|goals?|learning outcomes?|what will I learn|what are the objectives/i.test(q);
+    // Use glossary for clear definition/concept questions (simple explanations, no raw course copy).
+    var useGlossary = (isDefinitional || tokens.length <= 5) && !/difference|between|compare|vs\.?|versus/i.test(q);
+    if (useGlossary) {
+      for (var g = 0; g < GLOSSARY.length; g++) {
+        if (GLOSSARY[g].pattern.test(q) && GLOSSARY[g].message) {
+          return { ok: true, message: GLOSSARY[g].message };
+        }
+      }
+    }
     var wantExamples = /example|quiz|question|practice/i.test(q);
     // Exclude quiz items (question/answer) unless user asks for examples
     var typeOk = function(e) { return wantExamples || (e.type !== 'question' && e.type !== 'answer'); };
